@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b0d0a">
+  <meta name="description" content="BID XI: subasta de fútbol para jugar con tus amigos. 100 futbolistas, cartas de colección y pujas en directo.">
+  <meta property="og:title" content="BID XI — La subasta de fútbol">
+  <meta property="og:description" content="Crea tu club. Gana la puja. Domina la noche.">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png">
+  <link rel="preconnect" href="https://en.wikipedia.org">
+  <link rel="preconnect" href="https://upload.wikimedia.org">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,500;0,600;0,700;0,800;0,900;1,800;1,900&family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css">
+  <title>BID XI — La subasta de fútbol</title>
+</head>
+<body>
+  <div class="stadium-glow" aria-hidden="true"></div>
+  <header class="site-header">
+    <a href="./" class="brand-link" aria-label="BID XI, inicio">
+      <img src="./logo.svg" alt="" width="45" height="45">
+      <span class="wordmark">BID<span class="wordmark-slash">/</span>XI <em>FOOTBALL AUCTION</em></span>
+    </a>
+    <div class="header-right">
+      <span class="season-pill"><span class="status-dot"></span> SEASON 26 <span class="season-sep">/</span> LIVE MARKET</span>
+      <button id="soundToggle" class="icon-button" title="Activar sonido" aria-label="Activar sonido">♪ <span class="sound-off">OFF</span></button>
+      <button id="install" class="outline-btn install-btn" hidden>↧ INSTALAR</button>
+    </div>
+  </header>
+  <main>
+    <section id="setup" class="setup-layout">
+      <div class="hero-copy">
+        <div class="eyebrow"><span class="eyebrow-line"></span> EL MERCADO ABRE ESTA NOCHE <span class="eyebrow-number">001 — 026</span></div>
+        <h1 class="hero-title">NO COMPRES<br><span class="stroke-title">JUGADORES.</span><br><span class="lime">GANA</span> LEYENDAS<span class="period">.</span></h1>
+        <p class="hero-desc">100 cracks. Un presupuesto. Amigos que se convierten en rivales. Cuando aparece una estrella, solo uno puede llevársela.</p>
+        <div class="hero-signatures">
+          <div><b>100</b><span>FUTBOLISTAS</span></div>
+          <div><b>01</b><span>GANADOR</span></div>
+          <div><b>∞</b><span>PIQUES</span></div>
+        </div>
+        <div class="hero-ornament" aria-hidden="true"><span class="orb orb-one"></span><span class="orb orb-two"></span><span class="orb orb-three"></span><span class="huge-xi">XI</span><div class="pitch-ring"></div></div>
+        <div class="hero-footnote">BUILT FOR THE BEAUTIFUL GAME <span>✦</span> NO SECOND CHANCES</div>
+      </div>
+      <div class="setup-shell">
+        <div class="form-header"><span class="section-index">01 / SETUP</span><span class="setup-badge">NUEVA PARTIDA <span>↗</span></span></div>
+        <h2>REÚNE A TU <i>ONCE.</i></h2>
+        <p class="setup-intro">Configura las reglas de la noche. El resto lo decide el mercado.</p>
+        <div class="form-grid">
+          <div class="field"><label for="count">PARTICIPANTES</label><div class="input-control"><input id="count" type="number" inputmode="numeric" min="2" max="10" value="4"><span>JUG.</span></div></div>
+          <div class="field"><label for="budget">PRESUPUESTO INICIAL</label><div class="input-control"><input id="budget" type="number" inputmode="numeric" min="1" max="10000" value="30"><span>€</span></div></div>
+          <div class="field"><label for="slots">JUGADORES POR EQUIPO</label><div class="input-control"><input id="slots" type="number" inputmode="numeric" min="1" max="15" value="5"><span>CARTAS</span></div></div>
+          <div class="field"><label for="inc">INCREMENTO MÍNIMO</label><div class="input-control"><input id="inc" type="number" inputmode="numeric" min="1" max="1000" value="1"><span>€</span></div></div>
+        </div>
+        <div class="section-rule"><span>LOS PRESIDENTES <span class="faint">/ DALES UN NOMBRE</span></span><span id="nameCount">04 CLUBES</span></div>
+        <div id="names" class="names-grid"></div>
+        <div id="setupError" class="inline-error hidden" role="alert"></div>
+        <button id="start" class="primary-btn wide-btn">ABRIR EL MERCADO <span>↗</span></button>
+        <button id="load" class="text-btn">↺ &nbsp; CONTINUAR PARTIDA GUARDADA</button>
+        <p class="privacy-note">✓ SIN REGISTRO &nbsp;·&nbsp; ✓ PARTIDA GUARDADA EN TU DISPOSITIVO</p>
+      </div>
+    </section>
+
+    <section id="game" class="game-layout hidden">
+      <div class="game-header">
+        <div><div class="eyebrow"><span class="eyebrow-line"></span> MERCADO EN DIRECTO <span class="live-dot"></span></div><h1 class="game-title">LA SALA DE <i>SUBASTAS.</i></h1></div>
+        <div class="game-header-right"><div class="edition-identifier">EDICIÓN <b>26</b><span>// BID XI CLUB</span></div><button id="reset" class="subtle-btn">↺ NUEVA PARTIDA</button></div>
+      </div>
+      <div class="game-stats" id="summary"></div>
+      <nav class="tabs" aria-label="Secciones del juego">
+        <button class="tab active" data-tab="auction">01 <span>LA SUBASTA</span></button>
+        <button class="tab" data-tab="teams">02 <span>LOS CLUBES</span></button>
+        <button class="tab" data-tab="ranking">03 <span>CLASIFICACIÓN</span></button>
+        <button class="tab" data-tab="album">04 <span>ÁLBUM</span></button>
+      </nav>
+      <section id="auctionTab" class="tab-pane">
+        <div class="auction-grid">
+          <div class="showcase">
+            <div class="showcase-heading"><span>✦ &nbsp; EN EL ESCAPARATE</span><span id="lotNumber">LOTE 001 / 100</span></div>
+            <div class="showcase-stage"><div class="stage-halo"></div><div class="stage-lines"></div><div class="stage-label-left">BID XI / EXCLUSIVE</div><div class="stage-label-right">THE BEAUTIFUL GAME — 26</div><div id="activeCard" class="stage-card"></div><div class="ground-glow"></div></div>
+            <div class="showcase-bottom"><span class="status-dot"></span> <span id="stageStatus">OBJETIVO REVELADO</span><span class="showcase-bottom-right">◆ PLAYER DROP SERIES</span></div>
+          </div>
+          <aside class="bid-console">
+            <div class="bid-console-top"><span class="section-index">02 / BID ROOM</span><span class="on-air"><i></i> EN DIRECTO</span></div>
+            <div class="lot-heading"><span class="tiny-label">AHORA EN SUBASTA</span><h2 id="pname">—</h2><div class="player-meta" id="pinfo"></div><a id="photoSource" class="photo-credit hidden" href="https://commons.wikimedia.org/" target="_blank" rel="noopener noreferrer">VER FUENTE Y LICENCIA DE LA FOTOGRAFÍA ↗</a></div>
+            <div class="bid-display"><div class="bid-display-top"><span>PUJA ACTUAL</span><span class="bid-symbol">↗</span></div><div id="bid" class="bid-value">0 <small>€</small></div><div id="leader" class="bid-leader"><span class="leader-bullet"></span> ABIERTO A TODOS LOS CLUBES</div></div>
+            <div class="turn-panel"><div class="turn-panel-heading"><span>EL SIGUIENTE EN JUGAR</span><span class="turn-badge" id="turnBadge">TURNO 01</span></div><select id="bidder" aria-label="Participante al que le toca"></select><span class="helper-text" id="balanceHint">Selecciona el participante de su turno.</span></div>
+            <div class="bid-control-label"><label for="amount">TU OFERTA</label><span id="minimumBid">MÍNIMO 1 €</span></div>
+            <div class="bid-input-row"><button id="decreaseBid" class="bid-step" title="Bajar puja" aria-label="Bajar puja">−</button><div class="amount-wrap"><input id="amount" type="number" inputmode="numeric" min="1" value="1" aria-label="Importe de la puja"><span>€</span></div><button id="increaseBid" class="bid-step" title="Subir puja" aria-label="Subir puja">+</button></div>
+            <div class="quick-bids"><button class="quick-bid" data-add="1">+1 €</button><button class="quick-bid" data-add="2">+2 €</button><button class="quick-bid" data-add="5">+5 €</button><button class="quick-bid" data-add="10">+10 €</button></div>
+            <button id="makeBid" class="primary-btn bid-now">CONFIRMAR PUJA <span>↗</span></button>
+            <div class="bid-secondary"><button id="pass" class="outline-btn">PASAR TURNO →</button><button id="award" class="outline-btn" disabled>ADJUDICAR <span>✦</span></button></div>
+            <div id="turnNote" class="console-notice" role="status" aria-live="polite">Que comience la puja.</div>
+          </aside>
+        </div>
+        <div class="under-stage">
+          <div class="feed-panel"><div class="section-rule"><span>ÚLTIMOS MOVIMIENTOS</span><span>↗ LIVE FEED</span></div><div id="eventFeed" class="event-feed"></div></div>
+          <div class="next-panel"><div class="section-rule"><span>PRÓXIMAS APARICIONES</span><span>CLASIFICADO</span></div><div class="sealed-queue"><span class="sealed-card">?</span><span class="sealed-card">?</span><span class="sealed-card">?</span><div><b>LO QUE VIENE ES SECRETO.</b><p id="waitingPlayers">El siguiente jugador se elige aleatoriamente.</p></div></div><button id="skip" class="text-btn skip-btn">DESCARTAR JUGADOR ACTUAL ↗</button></div>
+        </div>
+      </section>
+      <section id="teamsTab" class="tab-pane hidden"><div class="pane-heading"><div><div class="eyebrow">LOS PRESIDENTES / 02</div><h2>CLUBES <i>EN CONSTRUCCIÓN.</i></h2></div><p>Todo fichaje cuenta. Cada euro, también.</p></div><div id="teams" class="teams-grid"></div></section>
+      <section id="rankingTab" class="tab-pane hidden"><div class="pane-heading"><div><div class="eyebrow">EL VEREDICTO / 03</div><h2>SOLO PUEDE <i>QUEDAR UNO.</i></h2></div><p>Ranking por suma de medias de los jugadores fichados.</p></div><div id="ranking" class="ranking-list"></div></section>
+      <section id="albumTab" class="tab-pane hidden"><div class="pane-heading"><div><div class="eyebrow">EL ARCHIVO / 04</div><h2>HISTORIAS DEL <i>MERCADO.</i></h2></div><p>Descubre las cartas a medida que salen. Las próximas siguen siendo una sorpresa.</p></div><div class="album-filters"><button class="filter active" data-filter="all">TODAS</button><button class="filter" data-filter="sold">FICHADAS</button><button class="filter" data-filter="unsold">DESCARTADAS</button><button class="filter" data-filter="active">EN SUBASTA</button></div><div id="album" class="album-grid"></div></section>
+    </section>
+  </main>
+  <footer class="site-footer"><span>© BID/XI — AN INDEPENDENT FOOTBALL AUCTION EXPERIENCE</span><span>FOTOGRAFÍAS: <a href="https://commons.wikimedia.org/" target="_blank" rel="noopener noreferrer">WIKIMEDIA COMMONS / WIKIPEDIA ↗</a> <span class="footer-sep">·</span> <a href="https://www.ea.com/es/games/ea-sports-fc/ratings" target="_blank" rel="noopener noreferrer">REFERENCIA FC 26 ↗</a></span><span>NO AFILIADO A EA SPORTS / LOS ATRIBUTOS SECUNDARIOS SON ILUSTRATIVOS</span></footer>
+  <div id="revealOverlay" class="screen-overlay hidden" role="dialog" aria-label="Revelando jugador" aria-modal="true"><div class="reveal-light"></div><div class="reveal-ring reveal-ring-a"></div><div class="reveal-ring reveal-ring-b"></div><div class="reveal-content"><div class="overlay-kicker">BID XI / PLAYER DROP</div><div class="reveal-pack"><img src="./logo.svg" alt="BID XI"><span>26</span></div><h2 class="reveal-text">¿QUIÉN SERÁ <i>EL SIGUIENTE?</i></h2><div class="reveal-loading"><span></span></div><button id="skipReveal" class="text-btn">SALTAR ANIMACIÓN ↗</button></div></div>
+  <div id="winOverlay" class="screen-overlay hidden win-overlay" role="dialog" aria-label="Jugador adjudicado" aria-modal="true"><div id="confetti" class="confetti" aria-hidden="true"></div><div class="win-layout"><div class="win-copy"><div class="overlay-kicker"><span class="status-dot"></span> TRATO CERRADO / DEAL DONE</div><div class="win-kicker">¡ADJUDICADO!</div><h2 id="winTeam">NOMBRE DEL CLUB</h2><div id="winPlayer" class="win-player-name">JUGADOR</div><p>Ya tiene nuevo dueño. <strong id="winPrice">€0</strong> han decidido su destino.</p><button id="continueWin" class="primary-btn">SIGUIENTE FUTBOLISTA <span>↗</span></button></div><div id="winCard" class="win-card"></div></div></div>
+  <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+  <script src="./players.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
