@@ -5,6 +5,15 @@ const $ = id => document.getElementById(id);
 const SAVE_KEY = 'bidxi-game-v2';
 const PHOTO_KEY = 'bidxi-photos-v2';
 const ROOM_SESSION_KEY = 'bidxi-room-session-v1';
+const PEER_OPTIONS = {
+  config: {
+    iceServers: [
+      {urls:'stun:stun.l.google.com:19302'},
+      {urls:'stun:stun.cloudflare.com:3478'}
+    ],
+    sdpSemantics:'unified-plan'
+  }
+};
 const RARITY = {titan:'TITAN',elite:'ELITE',rare:'STAR',gold:'GOLD'};
 const STATS = ['RIT','TIR','PAS','REG','DEF','FIS'];
 const GK_STATS = ['EST','MAN','SAQ','REF','VEL','POS'];
@@ -311,7 +320,10 @@ function roomStatus(message,warning=false) {
   if(setupStatus){setupStatus.textContent=message;setupStatus.classList.toggle('is-warning',warning);}
 }
 function reportPeerError(error) {
-  const detail=error?.type==='unavailable-id'?'Ese código ya está en uso. Reinicia la partida para generar otra sala.':`No se pudo conectar con la sala${error?.message?': '+error.message:'.'}`;
+  let detail;
+  if(error?.type==='unavailable-id')detail='Ese código ya está en uso. Reinicia la partida para generar otra sala.';
+  else if(error?.type==='webrtc'||/negotiat/i.test(error?.message||''))detail='Falló la conexión directa entre dispositivos (WebRTC). Comprueba que ambos tengan Internet, desactiva VPN/proxy y prueba otra red; algunas redes requieren un servidor TURN.';
+  else detail=`No se pudo conectar con la sala${error?.message?': '+error.message:'.'}`;
   roomStatus(detail,true);toast(detail,true);
 }
 function loadPeerJS() {
@@ -333,7 +345,7 @@ function startHosting() {
   try{
     loadPeerJS().then(()=>{
       if(room.role!=='host')return;
-      room.peer=new window.Peer('bidxi'+room.code);
+      room.peer=new window.Peer('bidxi'+room.code,PEER_OPTIONS);
       room.peer.on('open',()=>{room.status='Sala abierta. Comparte el código para que se unan.';roomStatus(room.status);broadcastLobby();});
       room.peer.on('connection',conn=>{
         room.connections.set(conn.peer,conn);
@@ -368,7 +380,7 @@ function connectToRoom() {
   try{
     loadPeerJS().then(()=>{
       if(room.role!=='guest')return;
-      room.peer=new window.Peer();
+      room.peer=new window.Peer(undefined,PEER_OPTIONS);
       room.peer.on('open',id=>{
         room.localPeerId=id;
         room.hostConn=room.peer.connect('bidxi'+code,{reliable:true});
