@@ -1,4 +1,4 @@
-/* BID//XI player pool. EA FC 26-inspired ratings snapshot, not affiliated with EA. */
+/* Football player pool. Ratings are an illustrative snapshot, not official game data. */
 const PLAYER_ROWS = `
 Kylian Mbappé|DC|Real Madrid|91|157|FR
 Erling Haaland|DC|Manchester City|91|167|NO
@@ -101,7 +101,7 @@ Felix Nmecha|MC|Borussia Dortmund|84|54.5|DE
 Adrien Rabiot|MC|AC Milan|84|40.5|FR
 João Cancelo|LD|FC Barcelona|84|30.5|PT
 `;
-const PLAYERS=PLAYER_ROWS.trim().split('\n').map((row,id)=>{
+const FOOTBALL_PLAYERS=PLAYER_ROWS.trim().split('\n').map((row,id)=>{
   const [name,pos,club,ovr,value,country,wiki]=row.split('|');
   return {id,name,pos,club,ovr:Number(ovr),value:Number(value),country,wiki:wiki||name,rarity:Number(ovr)>=90?'titan':Number(ovr)>=88?'elite':Number(ovr)>=86?'rare':'gold'};
 });

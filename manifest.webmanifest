@@ -1,8 +1,8 @@
 {
   "id": "./index.html",
-  "name": "BID XI — Football Auction",
-  "short_name": "BID XI",
-  "description": "La noche de las pujas: crea tu club y ficha a los mejores.",
+  "name": "The Auction",
+  "short_name": "The Auction",
+  "description": "Elige fútbol o basket, crea tu equipo y ficha a las estrellas.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

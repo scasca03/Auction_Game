@@ -1,4 +1,4 @@
-/* BID/XI v2 — vanilla JavaScript; PeerJS loads only when creating or joining a room. */
+/* The Auction — vanilla JavaScript; PeerJS loads only when creating or joining a room. */
 (() => {
 'use strict';
 const $ = id => document.getElementById(id);
@@ -8,22 +8,57 @@ const ROOM_SESSION_KEY = 'bidxi-room-session-v1';
 const RARITY = {titan:'TITAN',elite:'ELITE',rare:'STAR',gold:'GOLD'};
 const STATS = ['RIT','TIR','PAS','REG','DEF','FIS'];
 const GK_STATS = ['EST','MAN','SAQ','REF','VEL','POS'];
+const BASKETBALL_STATS = ['TIR','TRI','PAS','REG','DEF','REB'];
 const qs = (s, parent=document) => [...parent.querySelectorAll(s)];
 const e = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const euro = v => new Intl.NumberFormat('es-ES',{maximumFractionDigits:0}).format(v) + ' €';
 const fmt = v => new Intl.NumberFormat('es-ES',{maximumFractionDigits:0}).format(v);
-const flag = country => /^[A-Z]{2}$/.test(country) ? [...country].map(c=>String.fromCodePoint(127397+c.charCodeAt(0))).join('') : '⚽';
+const flag = country => /^[A-Z]{2}$/.test(country) ? [...country].map(c=>String.fromCodePoint(127397+c.charCodeAt(0))).join('') : selectedSport==='basketball'?'🏀':'⚽';
 const time = () => new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
 const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-let game = null, audioEnabled = false, audioContext = null, installPrompt = null, revealTimer = null, toastTimer = null, photoCache = {}, photoRequest = null, currentAlbumFilter = 'all', storageError = false;
+let selectedSport = 'football', PLAYERS = FOOTBALL_PLAYERS, game = null, audioEnabled = false, audioContext = null, installPrompt = null, revealTimer = null, toastTimer = null, photoCache = {}, photoRequest = null, currentAlbumFilter = 'all', storageError = false;
 let room = {role:null,peer:null,connections:new Map(),hostConn:null,code:'',status:'',owners:{},localPeerId:'',myTeam:null,maxPlayers:0,joinName:'',lobby:null,reconnectTokens:{}};
 let guestGameInitialized = false;
 let peerScriptRequest = null;
 let roomConnectionPending = false;
 let clockInterval = null, clockTurnKey = '', resultsText = '';
 const brokenPhotoIds = new Set();
-let localPhotosLoaded = false;
-try { photoCache = JSON.parse(localStorage.getItem(PHOTO_KEY) || '{}') || {}; } catch (_) { photoCache = {}; }
+const localPhotosLoaded = new Set();
+
+function photoStorageKey(sport=selectedSport) { return sport==='football'?PHOTO_KEY:`${PHOTO_KEY}-${sport}`; }
+function gameStorageKey(sport=selectedSport) { return sport==='football'?SAVE_KEY:`${SAVE_KEY}-${sport}`; }
+function setSport(sport, persist=true) {
+  if(sport!=='football'&&sport!=='basketball')return;
+  selectedSport=sport;
+  PLAYERS=sport==='basketball'?BASKETBALL_PLAYERS:FOOTBALL_PLAYERS;
+  try { photoCache=JSON.parse(localStorage.getItem(photoStorageKey(sport))||'{}')||{}; }
+  catch(error) { console.warn('No se pudo recuperar la caché de fotos.',error); photoCache={}; }
+  const basketball=sport==='basketball';
+  brokenPhotoIds.clear();
+  document.body.classList.toggle('sport-basketball',sport==='basketball');
+  const themeColor=document.querySelector('meta[name="theme-color"]');
+  if(themeColor)themeColor.content=basketball?'#080b13':'#0b0d0a';
+  if($('sport')){$('sport').value=sport;$('sport').disabled=Boolean(room.role);}
+  if(persist)try{localStorage.setItem('auction-sport',sport);}catch(error){console.warn('No se pudo guardar el deporte seleccionado.',error);}
+  $('heroTitle').innerHTML=basketball
+    ? 'NO ELIJAS<br><span class="stroke-title">ESTRELLAS.</span><br><span class="lime">CREA</span> LEYENDAS<span class="period">.</span>'
+    : 'NO COMPRES<br><span class="stroke-title">JUGADORES.</span><br><span class="lime">GANA</span> LEYENDAS<span class="period">.</span>';
+  $('heroDesc').textContent=basketball
+    ? '100 estrellas de la NBA. Un presupuesto. Amigos que se convierten en rivales. Cuando aparece una leyenda, solo uno se la lleva.'
+    : '100 cracks. Un presupuesto. Amigos que se convierten en rivales. Cuando aparece una estrella, solo uno puede llevársela.';
+  $('poolCountLabel').textContent=basketball?'JUGADORES NBA':'FUTBOLISTAS';
+  $('sportFootnote').textContent=basketball?'BUILT FOR THE COURT':'BUILT FOR THE BEAUTIFUL GAME';
+  $('setupTitle').innerHTML=basketball?'ARMA TU <i>QUINTETO.</i>':'REÚNE A TU <i>ONCE.</i>';
+  $('seasonLabel').textContent=basketball?'NBA / LIVE MARKET':'SEASON 26 / LIVE MARKET';
+  $('sportBadge').textContent=basketball?'BASKETBALL':'FOOTBALL';
+  if(game){render();if(game.started)loadPhotos();}
+}
+try {
+  const preferred=localStorage.getItem('auction-sport');
+  if(preferred==='basketball')selectedSport=preferred;
+  photoCache=JSON.parse(localStorage.getItem(photoStorageKey())||'{}')||{};
+} catch(error) { console.warn('No se pudo recuperar la configuración local.',error); }
+PLAYERS=selectedSport==='basketball'?BASKETBALL_PLAYERS:FOOTBALL_PLAYERS;
 
 function shuffle(input) {
   const a = [...input];
@@ -45,59 +80,63 @@ function revealedCount() { return Object.keys(game.results).length + (current() 
 function playerStats(p) {
   let hash=17; for(const char of p.name)hash=(hash*31+char.charCodeAt(0))>>>0;
   const base=p.ovr; const gk=p.pos==='POR';
-  const byPos={DC:[8,7,-15,0,-41,3],EI:[8,-1,0,9,-35,-10],ED:[8,-1,0,9,-35,-10],MC:[-4,-4,6,4,0,-3],MCO:[-1,2,6,7,-24,-9],MCD:[-14,-17,7,-9,5,5],DFC:[-17,-34,-17,-18,7,5],LI:[8,-14,-5,-2,5,1],LD:[8,-14,-5,-2,5,1]};
-  const adjust = gk ? [1,0,-11,2,-36,2] : (byPos[p.pos]||[0,0,0,0,0,0]);
+  const footballAdjustments={DC:[8,7,-15,0,-41,3],EI:[8,-1,0,9,-35,-10],ED:[8,-1,0,9,-35,-10],MC:[-4,-4,6,4,0,-3],MCO:[-1,2,6,7,-24,-9],MCD:[-14,-17,7,-9,5,5],DFC:[-17,-34,-17,-18,7,5],LI:[8,-14,-5,-2,5,1],LD:[8,-14,-5,-2,5,1]};
+  const basketballAdjustments={PG:[4,3,7,8,-9,-18],SG:[6,5,1,7,-10,-14],SF:[1,0,0,2,0,-4],PF:[-8,-10,-3,-5,9,10],C:[-18,-20,-9,-12,13,16]};
+  const adjust=selectedSport==='basketball'?(basketballAdjustments[p.pos]||[0,0,0,0,0,0]):(gk?[1,0,-11,2,-36,2]:(footballAdjustments[p.pos]||[0,0,0,0,0,0]));
   return adjust.map((delta,i)=>Math.max(30,Math.min(99,base+delta+(((hash>>>(i*4))&7)-3))));
 }
 function photoFor(p) { return brokenPhotoIds.has(p.id) ? null : photoCache[p.id]?.url || null; }
 function photoLink(p) { return photoCache[p.id]?.source || ('https://en.wikipedia.org/wiki/'+encodeURIComponent(p.wiki.replace(/ /g,'_'))); }
-function photoBroken(id) { brokenPhotoIds.add(id); syncPhotosToDOM(); }
+function photoBroken(id,sport=selectedSport) { if(sport!==selectedSport)return;brokenPhotoIds.add(id);syncPhotosToDOM(); }
 function card(p,size='',showPhoto=true) {
   const initials=p.name.split(' ').slice(0,2).map(n=>n[0]).join('').toUpperCase();
-  const stats=playerStats(p), labels=p.pos==='POR'?GK_STATS:STATS;
+  const stats=playerStats(p), labels=selectedSport==='basketball'?BASKETBALL_STATS:(p.pos==='POR'?GK_STATS:STATS);
   const photo=showPhoto ? photoFor(p) : null;
+  const sport=selectedSport;
   return `<article class="player-card rarity-${p.rarity} ${size} ${photo?'':'photo-pending'}" aria-label="${e(p.name)}, ${p.pos}, media ${p.ovr}">
-    <div class="card-orbit"></div><div class="card-watermark" aria-hidden="true">XI</div>
-    <div class="card-photo ${photo?'has-photo':''}" data-photo-id="${p.id}">${photo?`<img src="${e(photo)}" alt="Foto de ${e(p.name)}" loading="${size?'lazy':'eager'}" referrerpolicy="no-referrer" onerror="window.BIDXI?.photoBroken(${p.id});this.parentNode.classList.remove('has-photo');this.remove()">`:''}<span class="photo-fallback">${e(initials)}</span></div>
+    <div class="card-orbit"></div><div class="card-watermark" aria-hidden="true">TA</div>
+    <div class="card-photo ${photo?'has-photo':''}" data-photo-id="${p.id}">${photo?`<img src="${e(photo)}" alt="Foto de ${e(p.name)}" loading="${size?'lazy':'eager'}" referrerpolicy="no-referrer" onerror="window.AUCTION?.photoBroken(${p.id},'${sport}');this.parentNode.classList.remove('has-photo');this.remove()">`:''}<span class="photo-fallback">${e(initials)}</span></div>
     <div class="card-grade"><strong>${p.ovr}</strong><span>${e(p.pos)}</span></div>
     <div class="card-flag" title="${e(p.country)}">${flag(p.country)}</div><div class="card-rarity">◆ ${RARITY[p.rarity]}</div>
     <div class="card-nameplate"><strong title="${e(p.name)}">${e(p.name)}</strong><span>${e(p.club)}</span></div>
-    <div class="card-attributes">${labels.map((label,i)=>`<span><b>${stats[i]}</b> ${label}</span>`).join('')}</div><div class="card-number">BID/XI · 26</div>
+    <div class="card-attributes">${labels.map((label,i)=>`<span><b>${stats[i]}</b> ${label}</span>`).join('')}</div><div class="card-number">THE AUCTION · ${selectedSport==='basketball'?'NBA':'FOOTBALL'}</div>
   </article>`;
 }
 function syncPhotosToDOM() {
   qs('[data-photo-id]').forEach(node => {
     const id=Number(node.dataset.photoId), url=photoCache[id]?.url;
     if(!url || brokenPhotoIds.has(id) || node.querySelector('img'))return;
-    const img=document.createElement('img');img.src=url;img.alt='Foto de '+PLAYERS[id].name;img.loading=node.closest('.small')?'lazy':'eager';img.referrerPolicy='no-referrer';
-    img.onerror=()=>{brokenPhotoIds.add(id);node.classList.remove('has-photo');img.remove();};
+    const img=document.createElement('img'),sport=selectedSport;img.src=url;img.alt='Foto de '+PLAYERS[id].name;img.loading=node.closest('.small')?'lazy':'eager';img.referrerPolicy='no-referrer';
+    img.onerror=()=>{if(sport!==selectedSport)return;brokenPhotoIds.add(id);node.classList.remove('has-photo');img.remove();};
     node.prepend(img);node.classList.add('has-photo');node.closest('.player-card')?.classList.remove('photo-pending');
   });
   const p=current(),credit=$('photoSource');
   if(credit&&p){credit.href=photoLink(p);credit.classList.toggle('hidden',!photoFor(p));}
 }
-// Wikimedia images are retrieved by the user's browser, not copies of commercial EA card artwork.
-// An optional photo-manifest.json generated by tools/fetch-photos.py takes priority.
-async function loadPhotos() {
-  if(photoRequest) return photoRequest;
-  photoRequest=(async()=>{
-    if(!localPhotosLoaded){
-      localPhotosLoaded=true;
+// Wikimedia images are retrieved by the user's browser, not copies of commercial game artwork.
+// Optional sport-specific manifests generated by tools/fetch-photos.py take priority.
+function loadPhotos() {
+  const sport=selectedSport, players=PLAYERS, cache=photoCache;
+  if(photoRequest?.sport===sport)return photoRequest.request;
+  const request=(async()=>{
+    if(!localPhotosLoaded.has(sport)){
+      localPhotosLoaded.add(sport);
       try{
-        const res=await fetch('./photo-manifest.json',{cache:'no-cache'});
+        let res=await fetch(`./photo-manifest-${sport}.json`,{cache:'no-cache'});
+        if(!res.ok&&sport==='football')res=await fetch('./photo-manifest.json',{cache:'no-cache'});
         if(res.ok){
           const photos=await res.json();
           for(const [id,entry] of Object.entries(photos)){
-            if(Number.isInteger(+id)&&PLAYERS[+id]&&entry.url&&entry.source){
-              photoCache[id]={url:entry.url,source:entry.source,author:entry.author||'',license:entry.license||''};
+            if(Number.isInteger(+id)&&players[+id]&&entry.url&&entry.source){
+              cache[id]={url:entry.url,source:entry.source,author:entry.author||'',license:entry.license||''};
               brokenPhotoIds.delete(+id);
             }
           }
-          syncPhotosToDOM();
+          if(selectedSport===sport&&photoCache===cache)syncPhotosToDOM();
         }
       }catch(_){/* No predownloaded photo manifest: online Wikimedia fallback. */}
     }
-    const missing=PLAYERS.filter(p=>!photoCache[p.id]);
+    const missing=players.filter(p=>!cache[p.id]);
     const batches=[];
     for(let i=0;i<missing.length;i+=35)batches.push(missing.slice(i,i+35));
     await Promise.allSettled(batches.map(async group=>{
@@ -116,18 +155,19 @@ async function loadPhotos() {
         for(let j=0;j<4&&canon.has(title);j++)title=canon.get(title);
         const page=pages.get(title)||(query.pages||[]).find(pg=>pg.title.toLocaleLowerCase('es')===title.toLocaleLowerCase('es'));
         if(page?.thumbnail?.source){
-          photoCache[p.id]={url:page.thumbnail.source,source:page.pageimage?('https://commons.wikimedia.org/wiki/File:'+encodeURIComponent(page.pageimage.replace(/ /g,'_'))):('https://en.wikipedia.org/wiki/'+encodeURIComponent(page.title.replace(/ /g,'_')))};
+          cache[p.id]={url:page.thumbnail.source,source:page.pageimage?('https://commons.wikimedia.org/wiki/File:'+encodeURIComponent(page.pageimage.replace(/ /g,'_'))):('https://en.wikipedia.org/wiki/'+encodeURIComponent(page.title.replace(/ /g,'_')))};
         }
       }
-      syncPhotosToDOM();
+      if(selectedSport===sport&&photoCache===cache)syncPhotosToDOM();
     }));
-    try{localStorage.setItem(PHOTO_KEY,JSON.stringify(photoCache));}catch(_){}
+    try{localStorage.setItem(photoStorageKey(sport),JSON.stringify(cache));}catch(_){}
   })();
-  try { return await photoRequest; } finally { photoRequest=null; }
+  photoRequest={sport,request};
+  return request.finally(()=>{if(photoRequest?.request===request)photoRequest=null;});
 }
 function toast(message,warning=false){const t=$('toast');t.textContent=message;t.style.background=warning?'#ffba9e':'#eafdba';t.classList.remove('hidden');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.add('hidden'),3600);}
 function addLog(type,desc){game.log.unshift({type,desc,at:time()});game.log=game.log.slice(0,20);}
-function save(){if(!game||storageError||room.role==='guest')return;try{localStorage.setItem(SAVE_KEY,JSON.stringify(game));}catch(_){storageError=true; /* The game continues in memory if browser storage is blocked. */}}
+function save(){if(!game||storageError||room.role==='guest')return;try{localStorage.setItem(gameStorageKey(game.sport||'football'),JSON.stringify(game));}catch(_){storageError=true; /* The game continues in memory if browser storage is blocked. */}}
 function isFinished(){return game.teams.every(t=>t.players.length>=game.slots) || game.cursor>=game.queue.length || !game.teams.some((t,i)=>canPay(i,1));}
 function remainingSlots(i){return Math.max(0,game.slots-game.teams[i].players.length);}
 function maxPay(i){const t=game.teams[i];return Math.max(0,t.balance - Math.max(0,remainingSlots(i)-1));}
@@ -145,8 +185,8 @@ function canControlTurn(){
 }
 function validateSettings(n,budget,slots,inc){
   if(!Number.isInteger(n)||n<2||n>10)return 'Debes elegir entre 2 y 10 participantes.';
-  if(!Number.isInteger(slots)||slots<1||slots>15)return 'Elige entre 1 y 15 futbolistas por equipo.';
-  if(n*slots>PLAYERS.length)return `Solo hay ${PLAYERS.length} futbolistas. Reduce los jugadores por equipo a un máximo de ${Math.floor(PLAYERS.length/n)}.`;
+  if(!Number.isInteger(slots)||slots<1||slots>15)return 'Elige entre 1 y 15 jugadores por equipo.';
+  if(n*slots>PLAYERS.length)return `Solo hay ${PLAYERS.length} jugadores. Reduce las plazas por equipo a un máximo de ${Math.floor(PLAYERS.length/n)}.`;
   if(!Number.isInteger(budget)||budget<slots||budget>10000)return `El presupuesto debe ser de al menos ${slots} € para poder completar un equipo.`;
   if(!Number.isInteger(inc)||inc<1||inc>1000)return 'El incremento mínimo debe estar entre 1 € y 1.000 €.';
   return '';
@@ -230,7 +270,7 @@ function newGame() {
   else if(!error&&new Set(names.map(x=>x.toLocaleLowerCase('es'))).size!==names.length)error='Los nombres de los participantes deben ser distintos.';
   if(error){$('setupError').textContent=error;$('setupError').classList.remove('hidden');return;}
   $('setupError').classList.add('hidden');
-  game={version:2,createdAt:new Date().toISOString(),budget,slots,inc,turnSeconds:turnSeconds(),hostPlays:$('hostPlays').checked,teams:names.map((name,id)=>({id,name,balance:budget,players:[]})),queue:shuffle(PLAYERS.map(p=>p.id)),cursor:0,turn:0,bid:0,leader:null,passes:[],results:{},log:[],finished:false,pendingWin:false,paused:false,started:true};
+  game={version:2,sport:selectedSport,createdAt:new Date().toISOString(),budget,slots,inc,turnSeconds:turnSeconds(),hostPlays:$('hostPlays').checked,teams:names.map((name,id)=>({id,name,balance:budget,players:[]})),queue:shuffle(PLAYERS.map(p=>p.id)),cursor:0,turn:0,bid:0,leader:null,passes:[],results:{},log:[],finished:false,pendingWin:false,paused:false,started:true};
   game.turn=chooseTurn(0);
   startTurnClock();
   addLog('start',`Abre el mercado: ${n} clubes. ${PLAYERS.length} cartas por descubrir.`);
@@ -243,8 +283,9 @@ function createRoom(){
   if(!error&&$('hostPlays').checked&&(!hostName||hostName.length>24))error='Escribe tu nombre para crear la sala (máximo 24 caracteres).';
   if(error){$('setupError').textContent=error;$('setupError').classList.remove('hidden');return;}
   $('setupError').classList.add('hidden');
-  game={version:2,createdAt:new Date().toISOString(),budget,slots,inc,turnSeconds:turnSeconds(),hostPlays:$('hostPlays').checked,teams:hostName?[{id:0,name:hostName,balance:budget,players:[]}]:[],queue:shuffle(PLAYERS.map(p=>p.id)),cursor:0,turn:-1,bid:0,leader:null,passes:[],results:{},log:[],finished:false,pendingWin:false,paused:false,started:false};
+  game={version:2,sport:selectedSport,createdAt:new Date().toISOString(),budget,slots,inc,turnSeconds:turnSeconds(),hostPlays:$('hostPlays').checked,teams:hostName?[{id:0,name:hostName,balance:budget,players:[]}]:[],queue:shuffle(PLAYERS.map(p=>p.id)),cursor:0,turn:-1,bid:0,leader:null,passes:[],results:{},log:[],finished:false,pendingWin:false,paused:false,started:false};
   room.role='host';room.code=roomCode();room.maxPlayers=n;room.owners=hostName?{0:'host'}:{};room.reconnectTokens={};room.status='Esperando a que se unan los participantes.';
+  $('sport').disabled=true;
   roomStatus(room.status);renderSetupLobby();startHosting();
 }
 function roomCode() {
@@ -257,9 +298,9 @@ function inviteUrl(){
   const url=new URL(location.href);url.searchParams.set('room',room.code);return url.href;
 }
 async function shareInvite(method='share'){
-  const url=inviteUrl(),message=`¡Únete a mi subasta BID XI! Entra con tu nombre: ${url}`;
+  const url=inviteUrl(),message=`¡Únete a mi subasta The Auction! Entra con tu nombre: ${url}`;
   if(method==='whatsapp'){window.open('https://wa.me/?text='+encodeURIComponent(message),'_blank','noopener,noreferrer');return;}
-  if(navigator.share){try{await navigator.share({title:'Únete a mi sala BID XI',text:'Entra a mi subasta con este enlace:',url});return;}catch(error){if(error?.name==='AbortError')return;}}
+  if(navigator.share){try{await navigator.share({title:'Únete a mi sala The Auction',text:'Entra a mi subasta con este enlace:',url});return;}catch(error){if(error?.name==='AbortError')return;}}
   try{await navigator.clipboard.writeText(url);toast('Enlace de invitación copiado.');}
   catch(_){toast(`Comparte este código: ${room.code}`,true);}
 }
@@ -310,8 +351,8 @@ function startHosting() {
         conn.on('error',reportPeerError);
       });
       room.peer.on('error',reportPeerError);
-    }).catch(error=>{if(!room.peer){room.role=null;room.code='';renderRoomPanel();}reportPeerError(error);});
-  }catch(error){reportPeerError(error);}
+    }).catch(error=>{if(!room.peer){room.role=null;room.code='';$('sport').disabled=false;renderRoomPanel();}reportPeerError(error);});
+  }catch(error){room.role=null;room.code='';$('sport').disabled=false;reportPeerError(error);}
 }
 function connectToRoom() {
   if(roomConnectionPending)return;
@@ -323,7 +364,7 @@ function connectToRoom() {
   if(!/^[A-HJ-NP-Z2-9]{8}$/.test(code)){roomStatus('Introduce un código válido de 8 caracteres.',true);return;}
   if(!name||name.length>24){roomStatus('Escribe tu nombre (máximo 24 caracteres).',true);return;}
   leaveRoom();
-  room.role='guest';room.code=code;room.joinName=name;roomConnectionPending=true;roomStatus('Buscando la sala…');
+  room.role='guest';room.code=code;room.joinName=name;roomConnectionPending=true;$('sport').disabled=true;roomStatus('Buscando la sala…');
   try{
     loadPeerJS().then(()=>{
       if(room.role!=='guest')return;
@@ -337,8 +378,8 @@ function connectToRoom() {
         room.hostConn.on('error',error=>{roomConnectionPending=false;reportPeerError(error);});
       });
       room.peer.on('error',error=>{roomConnectionPending=false;reportPeerError(error);});
-    }).catch(error=>{roomConnectionPending=false;if(!room.peer){room.role=null;room.code='';}reportPeerError(error);});
-  }catch(error){roomConnectionPending=false;reportPeerError(error);}
+    }).catch(error=>{roomConnectionPending=false;if(!room.peer){room.role=null;room.code='';$('sport').disabled=false;}reportPeerError(error);});
+  }catch(error){roomConnectionPending=false;room.role=null;room.code='';$('sport').disabled=false;reportPeerError(error);}
 }
 function sendRoomState(conn) {
   if(!game||!conn?.open)return;
@@ -352,7 +393,7 @@ function broadcastState() {
 function sendLobby(conn){
   if(room.role!=='host'||game?.started)return;
   const teamId=Number(Object.keys(room.owners).find(id=>room.owners[id]===conn?.peer));
-  conn?.open&&conn.send({type:'lobby',code:room.code,maxPlayers:room.maxPlayers,players:game.teams.map(team=>team.name),teamId:Number.isInteger(teamId)?teamId:null,status:room.status});
+  conn?.open&&conn.send({type:'lobby',code:room.code,maxPlayers:room.maxPlayers,players:game.teams.map(team=>team.name),teamId:Number.isInteger(teamId)?teamId:null,status:room.status,sport:game.sport||'football'});
 }
 function broadcastLobby(){
   if(room.role!=='host'||game?.started)return;
@@ -423,11 +464,13 @@ function handleGuestMessage(message) {
     renderSetupLobby();return;
   }
   if(message.type==='lobby'){
+    if(message.sport&&message.sport!==selectedSport)setSport(message.sport,false);
     room.lobby=message;
     if(Number.isInteger(message.teamId))room.myTeam=message.teamId;
     renderSetupLobby(message);return;
   }
   if(message.type!=='state'||message.state?.version!==2||message.state.started!==true||!Array.isArray(message.state.teams)||!Array.isArray(message.state.queue))return;
+  if((message.state.sport||'football')!==selectedSport)setSport(message.state.sport||'football',false);
   const wasPending=Boolean(game?.pendingWin),oldPlayer=current()?.id,wasConnected=guestGameInitialized,wasFinished=Boolean(game?.finished);
   game=message.state;room.owners=message.owners&&typeof message.owners==='object'?message.owners:{};
   if(room.myTeam!==null&&room.owners[room.myTeam]!==room.localPeerId)room.myTeam=null;
@@ -521,6 +564,7 @@ function closeRoom(){
   room.connections.clear();room.peer?.destroy();
   if(game)game.paused=false;
   room={role:null,peer:null,connections:new Map(),hostConn:null,code:'',status:'',owners:{},localPeerId:'',myTeam:null,maxPlayers:0,joinName:'',lobby:null,reconnectTokens:{}};
+  $('sport').disabled=false;
   $('roomPanel')?.classList.add('hidden');$('roomControls')?.classList.add('hidden');
   roomStatus('Sala cerrada. La partida sigue disponible en este dispositivo.');
   render();
@@ -530,17 +574,19 @@ function leaveRoom() {
   room.hostConn?.close();
   room.peer?.destroy();
   room={role:null,peer:null,connections:new Map(),hostConn:null,code:'',status:'',owners:{},localPeerId:'',myTeam:null,maxPlayers:0,joinName:'',lobby:null,reconnectTokens:{}};
+  $('sport').disabled=false;
   clearInterval(clockInterval);clockInterval=null;clockTurnKey='';
   guestGameInitialized=false;
   roomConnectionPending=false;
   $('roomPanel')?.classList.add('hidden');
 }
 function showGame(){ $('setup').classList.add('hidden');$('game').classList.remove('hidden');$('game').classList.toggle('is-live',game?.started!==false);document.body.classList.toggle('game-live',game?.started!==false);window.scrollTo({top:0,behavior:'instant'}); }
-function resetGame(){if(!confirm('¿Borrar la partida actual y empezar una nueva?'))return;leaveRoom();clearTimeout(revealTimer);$('revealOverlay').classList.add('hidden');$('winOverlay').classList.add('hidden');game=null;try{localStorage.removeItem(SAVE_KEY);}catch(_){} $('game').classList.add('hidden');$('game').classList.remove('is-live');document.body.classList.remove('game-live');$('setup').classList.remove('hidden');switchTab('auction');window.scrollTo({top:0,behavior:'instant'});}
+function resetGame(){if(!confirm('¿Borrar la partida actual y empezar una nueva?'))return;leaveRoom();clearTimeout(revealTimer);$('revealOverlay').classList.add('hidden');$('winOverlay').classList.add('hidden');const savedSport=game?.sport||selectedSport;game=null;try{localStorage.removeItem(gameStorageKey(savedSport));}catch(error){console.warn('No se pudo borrar la partida guardada.',error);} $('game').classList.add('hidden');$('game').classList.remove('is-live');document.body.classList.remove('game-live');$('setup').classList.remove('hidden');switchTab('auction');window.scrollTo({top:0,behavior:'instant'});}
 function loadGame(){
   let saved;
-  try{saved=JSON.parse(localStorage.getItem(SAVE_KEY));}catch(_){}
+  try{saved=JSON.parse(localStorage.getItem(gameStorageKey()));}catch(error){console.warn('No se pudo leer la partida guardada.',error);}
   if(!saved||saved.version!==2||!Array.isArray(saved.queue)||!Array.isArray(saved.teams)||!saved.results){toast('No hay ninguna partida compatible guardada.',true);return;}
+  if((saved.sport||'football')!==selectedSport)setSport(saved.sport||'football');
   game=saved;if(game.pendingWin){game.pendingWin=false;advance(false);} // Resume after a completed deal, never re-award.
   showGame();render();loadPhotos();
   toast('Partida recuperada. Bienvenidos de nuevo.');
@@ -549,16 +595,16 @@ function render(){
   if(!game)return;
   const p=current(), sold=soldCount(), discovered=revealedCount(), totalNeeded=game.teams.length*game.slots;
   $('summary').innerHTML=[
-    ['◎',fmt(game.teams.length),'CLUBES EN LIZA'],
+    ['◎',fmt(game.teams.length),'EQUIPOS EN LIZA'],
     ['✦',fmt(sold)+' / '+fmt(totalNeeded),'FICHAJES'],
     ['↗',fmt(game.cursor+ (p?1:0))+' / '+fmt(PLAYERS.length),'LOTES ABIERTOS'],
     ['◈',fmt(Math.max(0,PLAYERS.length-discovered)),'POR DESCUBRIR']
   ].map(x=>`<div class="game-stat"><div class="stat-icon">${x[0]}</div><div><b>${x[1]}</b><span>${x[2]}</span></div></div>`).join('');
-  $('waitingPlayers').textContent=`Quedan ${Math.max(0,PLAYERS.length-discovered)} futbolistas sin revelar. Nadie sabe quién será el siguiente.`;
+  $('waitingPlayers').textContent=`Quedan ${Math.max(0,PLAYERS.length-discovered)} jugadores sin revelar. Nadie sabe quién será el siguiente.`;
   $('lotNumber').textContent=p?`LOTE ${String(game.cursor+1).padStart(3,'0')} / ${PLAYERS.length}`:'MERCADO CERRADO';
   if(!p){
-    $('photoSource')?.classList.add('hidden');$('pname').textContent='FIN DEL MERCADO';$('pinfo').textContent='Consulta los clubes y la clasificación final.';$('activeCard').innerHTML='<div style="font:900 90px var(--display);color:#d6fd4b;letter-spacing:-5px">BID/XI</div>';
-    $('bid').innerHTML='—';$('leader').textContent='LOS FICHAJES HAN TERMINADO';$('bidder').innerHTML='<option>Sin turnos pendientes</option>';
+    $('photoSource')?.classList.add('hidden');$('pname').textContent='FIN DEL MERCADO';$('pinfo').textContent='Consulta los clubes y la clasificación final.';$('activeCard').innerHTML='<div style="font:900 90px var(--display);color:var(--lime);letter-spacing:-5px">THE AUCTION</div>';
+    $('bid').innerHTML='—';$('leader').textContent='LOS FICHAJES HAN TERMINADO';
     $('balanceHint').textContent='Pasa a la clasificación para ver al campeón.';$('turnNote').textContent='FIN DE PARTIDA. ¡Gracias por jugar!';
     ['makeBid','pass','award','skip','amount','decreaseBid','increaseBid'].forEach(id=>$(id).disabled=true);qs('.quick-bid').forEach(x=>x.disabled=true);
     $('stageStatus').textContent='NOCHE COMPLETADA';
@@ -570,7 +616,6 @@ function render(){
     $('bid').innerHTML=`${fmt(game.bid)} <small>€</small>`;
     $('leader').innerHTML=game.leader===null?'<span class="leader-bullet"></span> SIN OFERTAS TODAVÍA':`<span class="leader-bullet"></span> LIDERA: <strong>${e(game.teams[game.leader].name.toUpperCase())}</strong>`;
     $('minimumBid').textContent=`MÍNIMO ${euro(minBid())}`;
-    $('bidder').innerHTML=game.teams.map((t,i)=>`<option value="${i}" ${i===game.turn?'selected':''} ${!eligible(i)?'disabled':''}>${e(t.name)} · ${euro(t.balance)}</option>`).join('');
     const active=game.turn>=0?game.teams[game.turn]:null;
     $('turnBadge').textContent=game.turn>=0?'TURNO '+String(game.turn+1).padStart(2,'0'):'ÚLTIMA OFERTA';
     $('balanceHint').textContent=active?`Saldo: ${euro(active.balance)} · Puja máxima: ${euro(maxPay(game.turn))} (reservando plazas).`:'Esperando a adjudicar el lote.';
@@ -613,7 +658,7 @@ function showResults(){
     .sort((a,b)=>b.score-a.score||b.balance-a.balance||a.id-b.id);
   const winner=ranked[0];
   resultsText=[
-    'BID/XI — RESULTADOS FINALES',
+    'THE AUCTION — RESULTADOS FINALES',
     `Ganador: ${winner?.name||'Sin equipos'}${winner?` (${winner.score} OVR)` : ''}`,
     `Fichajes: ${soldCount()}`,
     '',
@@ -625,13 +670,13 @@ function showResults(){
 }
 async function shareResults(){
   try{
-    if(navigator.share){await navigator.share({title:'Resultados BID/XI',text:resultsText});return;}
+    if(navigator.share){await navigator.share({title:'Resultados The Auction',text:resultsText});return;}
     await navigator.clipboard.writeText(resultsText);toast('Resultados copiados para compartir.');
   }catch(error){if(error?.name!=='AbortError')toast('No se pudieron compartir los resultados.',true);}
 }
 function downloadResults(){
   const file=new Blob([resultsText],{type:'text/plain;charset=utf-8'}),url=URL.createObjectURL(file),link=document.createElement('a');
-  link.href=url;link.download='bid-xi-resultados.txt';link.click();URL.revokeObjectURL(url);
+  link.href=url;link.download='the-auction-resultados.txt';link.click();URL.revokeObjectURL(url);
 }
 function renderAlbum(){
   const revealed=game.queue.slice(0,game.cursor+(current()?1:0)).map(id=>({p:PLAYERS[id],result:game.results[id]}));
@@ -748,6 +793,8 @@ function updateNames(){
 }
 // Bind UI
 $('count').addEventListener('input',updateNames);updateNames();
+$('sport').addEventListener('change',()=>setSport($('sport').value));
+setSport(selectedSport,false);
 $('start').addEventListener('click',()=>newGame(false));
 $('createRoom').addEventListener('click',createRoom);
 $('joinRoom').addEventListener('click',connectToRoom);
@@ -778,7 +825,8 @@ $('roomControls').addEventListener('click',async ev=>{
   else if(target.dataset.roomAction==='close')closeRoom();
   else if(target.dataset.roomAction==='reconnect')connectToRoom();
 });
-$('showTeams').addEventListener('click',()=>{$('auctionGrid').scrollTo({left:$('auctionGrid').scrollLeft>0?0:$('auctionGrid').scrollWidth,behavior:'smooth'});});
+$('mobileAuctionTab').addEventListener('click',()=>setMobileAuctionView('auction'));
+$('mobileTeamsTab').addEventListener('click',()=>setMobileAuctionView('teams'));
 $('load').addEventListener('click',loadGame);
 $('reset').addEventListener('click',resetGame);
 $('pass').addEventListener('click',()=>pass());
@@ -801,15 +849,18 @@ const savedRoom=loadRoomSession(),invitedRoom=new URLSearchParams(location.searc
 if(invitedRoom)$('joinCode').value=invitedRoom.toUpperCase();
 else if(savedRoom)$('joinCode').value=savedRoom.code;
 if(savedRoom)$('joinName').value=savedRoom.name;
-const auctionGrid=$('auctionGrid');
-auctionGrid.addEventListener('scroll',()=>{
-  const teamView=auctionGrid.scrollLeft>auctionGrid.clientWidth/2;
-  $('mobileViewStatus').textContent=teamView?'EQUIPOS · 2 / 2':'PUJA · 1 / 2';
-  qs('.mobile-slide-dots i').forEach((dot,index)=>dot.classList.toggle('is-active',Boolean(index===Number(teamView))));
-  $('showTeams').innerHTML=teamView?'VOLVER A LA PUJA <span>↖</span>':'VER EQUIPOS Y RANKING <span>↗</span>';
-},{passive:true});
+function setMobileAuctionView(view){
+  const teams=view==='teams';
+  $('auctionGrid').classList.toggle('show-teams',teams);
+  $('mobileAuctionTab').classList.toggle('is-active',!teams);
+  $('mobileAuctionTab').setAttribute('aria-pressed',String(!teams));
+  $('mobileTeamsTab').classList.toggle('is-active',teams);
+  $('mobileTeamsTab').setAttribute('aria-pressed',String(teams));
+  window.scrollTo({top:0,behavior:'instant'});
+}
 window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();installPrompt=event;$('install').hidden=false;});
 $('install').addEventListener('click',async()=>{if(installPrompt){installPrompt.prompt();await installPrompt.userChoice;installPrompt=null;$('install').hidden=true;}else toast('En el navegador, selecciona «Añadir a pantalla de inicio».');});
 if('serviceWorker' in navigator && location.protocol.startsWith('http'))navigator.serviceWorker.register('./sw.js').catch(()=>{});
-window.BIDXI={getState:()=>game,getPlayers:()=>PLAYERS,shuffle,photoBroken}; // Helpful for testing.
+window.AUCTION={getState:()=>game,getPlayers:()=>PLAYERS,getSport:()=>selectedSport,shuffle,photoBroken};
+window.BIDXI=window.AUCTION;
 })();

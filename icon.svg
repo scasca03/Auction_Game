@@ -1,6 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
-<rect width="512" height="512" rx="112" fill="#0b0d0a"/>
-<path d="M256 70 423 146v154c0 74-76 121-167 144-91-23-167-70-167-144V146Z" fill="#d6fd4b"/>
-<path d="M256 89 403 157v141c0 63-71 101-147 123-76-22-147-60-147-123V157Z" fill="#11180f"/>
-<path d="m156 327 63-178h35l-63 178Zm60 0 63-178h35l-63 178Zm63 0 28-79-26-99h35l11 47 19-47h36l-44 106 26 72h-35l-12-39-14 39Z" fill="#d6fd4b"/>
+  <defs>
+    <linearGradient id="a" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#ffad55"/>
+      <stop offset="1" stop-color="#f36537"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="#10131d"/>
+  <path d="M256 28 466 142v228L256 484 46 370V142Z" fill="#171c29" stroke="#333b4c" stroke-width="8"/>
+  <path d="m148 376 108-240 108 240M198 292h116" fill="none" stroke="url(#a)" stroke-width="36" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="m165 136 42-42 110 110-42 42z" fill="#fff2dc"/>
+  <path d="m139 159 56-56 42 42-56 56zM281 230l42-42 42 42-42 42z" fill="url(#a)"/>
+  <path d="M128 416h256" stroke="#ff8a45" stroke-width="10" stroke-linecap="round" opacity=".8"/>
 </svg>
