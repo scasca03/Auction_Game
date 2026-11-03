@@ -141,7 +141,7 @@ function loadPhotos() {
     for(let i=0;i<missing.length;i+=35)batches.push(missing.slice(i,i+35));
     await Promise.allSettled(batches.map(async group=>{
       const titles=group.map(p=>p.wiki);
-      const params=new URLSearchParams({origin:'*',action:'query',format:'json',formatversion:'2',prop:'pageimages',piprop:'thumbnail|name',pithumbsize:'760',redirects:'1',titles:titles.join('|')});
+      const params=new URLSearchParams({origin:'*',action:'query',format:'json',formatversion:'2',prop:'pageimages',piprop:'thumbnail|name',pithumbsize:'600',redirects:'1',titles:titles.join('|')});
       const response=await fetch('https://en.wikipedia.org/w/api.php?'+params,{mode:'cors',credentials:'omit'});
       if(!response.ok)throw Error('Wikipedia status '+response.status);
       const json=await response.json();
@@ -683,7 +683,7 @@ function renderAlbum(){
   const filtered=revealed.filter(({result,p})=>currentAlbumFilter==='all'||(currentAlbumFilter==='active' && current()?.id===p.id && !result)||result?.status===currentAlbumFilter);
   $('album').innerHTML=filtered.map(({p,result})=>`<div class="album-item">${card(p,'small')}<div class="album-item-label">${result?.status==='sold'?`<strong>FICHADO</strong> POR ${e(game.teams[result.owner].name.toUpperCase())} · ${euro(result.price)}`:result?.status==='unsold'?'DESCARTADO':'✦ EN SUBASTA'}</div></div>`).join('') || '<div class="album-empty">Todavía no hay cartas en esta categoría. ¡Vuelve cuando comience la acción!</div>';
 }
-function switchTab(tab){qs('.tab').forEach(t=>{t.classList.toggle('active',t.dataset.tab===tab);t.setAttribute('aria-current',t.dataset.tab===tab?'page':'false');});for(const t of ['auction','teams','ranking','album'])$(t+'Tab').classList.toggle('hidden',t!==tab);}
+function switchTab(tab){qs('.tab').forEach(t=>{t.classList.toggle('active',t.dataset.tab===tab);t.setAttribute('aria-current',t.dataset.tab===tab?'page':'false');});for(const t of ['auction','teams','ranking','album'])$(t+'Tab').classList.toggle('hidden',t!==tab);if(tab==='auction'&&mobileInstallQuery.matches)setMobileAuctionView('auction');}
 function sfx(type){
   if(!audioEnabled)return;
   try{
@@ -786,13 +786,24 @@ function skipPlayer(){if(!current()||game.paused||game.pendingWin)return;if(conf
 function amountAdjust(n){if(!game||game.turn<0)return;const currentValue=Number($('amount').value)||0;$('amount').value=String(Math.max(minBid(),Math.min(maxPay(game.turn),currentValue+n)));}
 function updateNames(){
   const old=qs('.name-entry input').map(x=>x.value);
-  const count=Math.max(2,Math.min(10,Math.floor(Number($('count').value)||4)));
-  $('count').value=String(count);
-  $('names').innerHTML=Array.from({length:count},(_,i)=>`<div class="name-entry"><span>${String(i+1).padStart(2,'0')}</span><input aria-label="Nombre del participante ${i+1}" maxlength="24" value="${e(old[i]??'')}" placeholder="${i===0?'Tu nombre':'Jugador '+(i+1)}"></div>`).join('');
-  $('nameCount').textContent=String(count).padStart(2,'0')+' CLUBES';
+  const raw=$('count').value;
+  if(raw==='')return;
+  const value=Number(raw);
+  if(!Number.isFinite(value))return;
+  const count=Math.floor(value);
+  if(count<2)return;
+  const boundedCount=Math.min(10,count);
+  if(value!==boundedCount)$('count').value=String(boundedCount);
+  $('names').innerHTML=Array.from({length:boundedCount},(_,i)=>`<div class="name-entry"><span>${String(i+1).padStart(2,'0')}</span><input aria-label="Nombre del participante ${i+1}" maxlength="24" value="${e(old[i]??'')}" placeholder="${i===0?'Tu nombre':'Jugador '+(i+1)}"></div>`).join('');
+  $('nameCount').textContent=String(boundedCount).padStart(2,'0')+' CLUBES';
 }
 // Bind UI
 $('count').addEventListener('input',updateNames);updateNames();
+$('count').addEventListener('change',()=>{
+  const count=Math.max(2,Math.min(10,Math.floor(Number($('count').value)||4)));
+  $('count').value=String(count);
+  updateNames();
+});
 $('sport').addEventListener('change',()=>setSport($('sport').value));
 setSport(selectedSport,false);
 $('start').addEventListener('click',()=>newGame(false));
@@ -858,8 +869,30 @@ function setMobileAuctionView(view){
   $('mobileTeamsTab').setAttribute('aria-pressed',String(teams));
   window.scrollTo({top:0,behavior:'instant'});
 }
-window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();installPrompt=event;$('install').hidden=false;});
-$('install').addEventListener('click',async()=>{if(installPrompt){installPrompt.prompt();await installPrompt.userChoice;installPrompt=null;$('install').hidden=true;}else toast('En el navegador, selecciona «Añadir a pantalla de inicio».');});
+const mobileInstallQuery=window.matchMedia('(max-width: 880px)');
+function syncInstallButton(){
+  const isStandalone=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+  const visible=!isStandalone&&(Boolean(installPrompt)||mobileInstallQuery.matches);
+  $('install').hidden=!visible;
+  $('mobileInstall').hidden=!visible;
+}
+window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();installPrompt=event;syncInstallButton();});
+window.addEventListener('appinstalled',()=>{installPrompt=null;syncInstallButton();});
+mobileInstallQuery.addEventListener?.('change',syncInstallButton);
+syncInstallButton();
+async function installApp(){
+  if(installPrompt){
+    installPrompt.prompt();
+    await installPrompt.userChoice;
+    installPrompt=null;
+    syncInstallButton();
+    return;
+  }
+  const isApple=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  toast(isApple?'En Safari, toca Compartir y elige «Añadir a pantalla de inicio».':'Abre el menú del navegador y elige «Instalar aplicación» o «Añadir a pantalla de inicio».');
+}
+$('install').addEventListener('click',installApp);
+$('mobileInstall').addEventListener('click',installApp);
 if('serviceWorker' in navigator && location.protocol.startsWith('http'))navigator.serviceWorker.register('./sw.js').catch(()=>{});
 window.AUCTION={getState:()=>game,getPlayers:()=>PLAYERS,getSport:()=>selectedSport,shuffle,photoBroken};
 window.BIDXI=window.AUCTION;

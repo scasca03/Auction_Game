@@ -7,7 +7,7 @@
 1. Descomprime [`The_Auction_v3.zip`](./The_Auction_v3.zip) **manteniendo todos los archivos en la misma carpeta**.
 2. Para jugar en local, abre `index.html`. Para funciones PWA, fotografías y multijugador, sirve la carpeta por HTTP: `python -m http.server 8080` y abre `http://localhost:8080`. En partidas por Internet, publica la app bajo HTTPS.
 3. Para publicarlo, sube **todo el contenido de la carpeta** a la raíz del repositorio GitHub Pages o a Netlify. **No basta con subir `index.html`**.
-4. En iOS o Android, selecciona *Añadir a pantalla de inicio* (PWA, tras publicar bajo HTTPS).
+4. En móvil, pulsa **Instalar app**; si el navegador no ofrece instalación directa, sigue las instrucciones para añadirla a la pantalla de inicio. La PWA requiere HTTPS (o localhost).
 
 ## Incluye
 
@@ -21,7 +21,7 @@
 - Temporizador de puja configurable (15 segundos por defecto, 30/45/60 o sin límite); al terminar, el turno pasa automáticamente. Los invitados pueden volver a entrar tras una desconexión o recarga usando su sesión local. Solo se permite una conexión activa por equipo.
 - Al terminar la partida se muestra el resultado con ranking y se puede compartir o descargar como texto.
 - Las salas usan PeerJS y su servicio público de señalización, sin desplegar un servidor propio. Todos necesitan Internet; si se bloquea PeerJS o WebRTC en la red/navegador, no se podrá conectar. El anfitrión debe mantener la página abierta: el estado compartido no se conserva si cierra la página o pierde su sesión.
-- En ordenador, la pantalla de partida ocupa el viewport y muestra solo jugador, consola de pujas y ranking en tres columnas. En móvil, la subasta usa una página vertical sencilla con jugador y controles juntos, y una navegación fija para alternar claramente entre pujas y equipos; el ranking muestra presupuesto y plantilla en directo.
+- En ordenador, la pantalla de partida ocupa el viewport y muestra solo jugador, consola de pujas y ranking en tres columnas. En móvil, la carta se muestra encima de la consola de pujas; la navegación permite cambiar entre subasta, equipos, clasificación y álbum, y alternar entre pujar y consultar los equipos.
 - Animación de revelación, celebración con confeti por fichaje, feedback auditivo opcional, adaptación a móvil y opción de reducir movimiento.
 - Guardado local independiente para cada deporte en el navegador, sujeto a disponibilidad de almacenamiento.
 

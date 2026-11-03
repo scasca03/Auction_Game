@@ -179,3 +179,37 @@ body.sport-basketball .auction-sidebar,.sport-basketball .bid-console{border-col
 .input-control select{background-image:linear-gradient(45deg,transparent 50%,#8794a8 50%),linear-gradient(135deg,#8794a8 50%,transparent 50%);background-position:calc(100% - 17px) 22px,calc(100% - 12px) 22px;background-size:5px 5px;background-repeat:no-repeat}
 body.sport-basketball .huge-xi{width:360px;height:360px;border:2px solid #ff9a5420;border-radius:50%;font-size:0;background:linear-gradient(90deg,transparent 49.6%,#ff9a5419 50%,transparent 50.4%),linear-gradient(0deg,transparent 49.6%,#ff9a5419 50%,transparent 50.4%)}
 body.sport-basketball .huge-xi:after{content:'';position:absolute;inset:0 105px;border:1px solid #ff9a5417;border-radius:50%}
+
+@media(max-width:880px){
+  #game.is-live>.tabs{display:flex;margin:0 0 10px;padding:0 2px;position:relative;z-index:4}
+  #game.is-live>.tabs .tab{flex:0 0 auto;margin:0 16px 0 0;padding:12px 4px 11px;font-size:11px}
+  #game.is-live>.tabs .tab span{font-size:14px}
+  .mobile-auction-nav{grid-template-columns:1fr 1fr}
+  .mobile-auction-nav .install-btn{grid-column:1/-1;justify-self:center;min-height:36px;padding:8px 14px;font-size:12px}
+  .showcase-stage{height:clamp(310px,88vw,350px);min-height:0;padding:12px 8px}
+  .stage-card .player-card:not(.small){width:min(64vw,220px);height:auto;aspect-ratio:292/425}
+  .stage-card .player-card:not(.small) .card-grade{top:12px;left:11px}
+  .stage-card .player-card:not(.small) .card-grade strong{font-size:clamp(31px,10vw,43px)}
+  .stage-card .player-card:not(.small) .card-grade span{font-size:15px}
+  .stage-card .player-card:not(.small) .card-flag{top:14px;right:13px;font-size:21px}
+  .stage-card .player-card:not(.small) .card-rarity{top:49px;right:11px;font-size:8px}
+  .stage-card .player-card:not(.small) .card-nameplate{left:9px;right:9px;bottom:54px;min-height:46px}
+  .stage-card .player-card:not(.small) .card-nameplate strong{font-size:clamp(16px,5.2vw,24px)}
+  .stage-card .player-card:not(.small) .card-nameplate span{font-size:8px}
+  .stage-card .player-card:not(.small) .card-attributes{left:11px;right:11px;bottom:12px;column-gap:4px;row-gap:4px;padding-top:7px}
+  .stage-card .player-card:not(.small) .card-attributes span{font-size:8px}
+  .stage-card .player-card:not(.small) .card-attributes b{margin-right:2px}
+  .stage-card .player-card:not(.small) .card-number{font-size:6px;letter-spacing:.8px}
+  .club-tile{padding:16px}
+  .club-tile-header{gap:9px}
+  .club-tile-header>div:first-child{min-width:0}
+  .club-tile h3{font-size:clamp(23px,7vw,34px);overflow-wrap:anywhere}
+  .club-tile-balance{flex:0 0 auto;font-size:clamp(25px,7vw,34px)}
+  .club-tile-balance span{font-size:8px}
+  .club-metrics{justify-content:space-between;gap:8px}
+  .club-metrics>div{min-width:0}
+  .club-metrics b{font-size:22px}
+  .roster-entry{gap:7px;padding:6px}
+  .roster-entry>strong{font-size:15px}
+  .site-header .install-btn{font-size:11px}
+}
