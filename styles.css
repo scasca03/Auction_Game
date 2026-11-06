@@ -180,6 +180,71 @@ body.sport-basketball .auction-sidebar,.sport-basketball .bid-console{border-col
 body.sport-basketball .huge-xi{width:360px;height:360px;border:2px solid #ff9a5420;border-radius:50%;font-size:0;background:linear-gradient(90deg,transparent 49.6%,#ff9a5419 50%,transparent 50.4%),linear-gradient(0deg,transparent 49.6%,#ff9a5419 50%,transparent 50.4%)}
 body.sport-basketball .huge-xi:after{content:'';position:absolute;inset:0 105px;border:1px solid #ff9a5417;border-radius:50%}
 
+body.sport-baseball{--bg:#0d120e;--canvas:#141b16;--canvas2:#1d2820;--canvas3:#29372b;--stroke:#3a4b3b;--line:#3d5140;--lime:#ff765f;--gold:#ffc18a;--cyan:#9ad5cb;--muted:#a1b2a1}
+body.sport-baseball .stadium-glow{background:radial-gradient(ellipse at 42% -10%,#26724b45 0,transparent 39%),radial-gradient(ellipse at 95% 35%,#e94d3322,transparent 40%),linear-gradient(180deg,#17251a 0,#0d120e 38%)}
+body.sport-baseball .hero-ornament:before{border-color:#ff8c6b36}
+body.sport-baseball .hero-ornament:after{background:radial-gradient(ellipse at center,#287d542e,transparent 65%)}
+body.sport-baseball .orb{border-color:#ffd0a52e}
+body.sport-baseball .huge-xi{color:#ff826018}
+body.sport-baseball .pitch-ring{border-color:#72c69b28}
+body.sport-baseball .setup-shell{background:linear-gradient(145deg,#1c2920,#121a15);border-color:#425746}
+body.sport-baseball .setup-shell:before{background:linear-gradient(90deg,#ff765f,#ffc18a)}
+body.sport-baseball .showcase-stage{background:radial-gradient(ellipse at 50% 72%,#20583e99 0,transparent 62%),linear-gradient(160deg,#18251c,#0f1712 62%,#1b281d)}
+body.sport-baseball .player-card{--foil:#ffc18a;--foil-dark:#604638;--foil-glow:#ff765f;background:radial-gradient(circle at 54% 26%,#326044 0,transparent 53%),linear-gradient(154deg,#294332,#17291e 60%,#101811)}
+body.sport-baseball .player-card.rarity-titan{--foil:#a7e4c2;--foil-dark:#315b48;--foil-glow:#92ddb6}
+body.sport-baseball .player-card.rarity-elite{--foil:#ffe09a;--foil-dark:#6c543a;--foil-glow:#ffd181}
+body.sport-baseball .player-card.rarity-rare{--foil:#a4e7d8;--foil-dark:#285d54;--foil-glow:#8de3d0}
+body.sport-baseball .season-pill{border-color:#4c664f}
+body.sport-baseball .auction-sidebar,body.sport-baseball .bid-console{border-color:#3a5542}
+body.sport-baseball .huge-xi{width:360px;height:360px;border:2px solid #6fce9a22;border-radius:50%;font-size:0;background:linear-gradient(90deg,transparent 49.6%,#6fce9a1d 50%,transparent 50.4%),linear-gradient(0deg,transparent 49.6%,#6fce9a1d 50%,transparent 50.4%)}
+body.sport-baseball .huge-xi:after{content:'';position:absolute;inset:0 105px;border:1px solid #ff89601c;border-radius:50%}
+
+body.sport-american-football{--bg:#11100d;--canvas:#191710;--canvas2:#242116;--canvas3:#332d1e;--stroke:#4b432d;--line:#51482f;--lime:#f3bd56;--gold:#f5dc9a;--cyan:#a9d8ff;--muted:#b3aa91}
+body.sport-american-football .stadium-glow{background:radial-gradient(ellipse at 42% -10%,#72502d4a 0,transparent 39%),radial-gradient(ellipse at 95% 35%,#b83b2d26,transparent 40%),linear-gradient(180deg,#252016 0,#11100d 38%)}
+body.sport-american-football .hero-ornament:before{border-color:#f5d17b32}
+body.sport-american-football .hero-ornament:after{background:radial-gradient(ellipse at center,#b77e3030,transparent 65%)}
+body.sport-american-football .orb{border-color:#f1d89b2e}
+body.sport-american-football .huge-xi{color:#f3bd5618}
+body.sport-american-football .pitch-ring{border-color:#e05b3a28}
+body.sport-american-football .setup-shell{background:linear-gradient(145deg,#29251a,#17150f);border-color:#55482d}
+body.sport-american-football .setup-shell:before{background:linear-gradient(90deg,#f3bd56,#e56b47)}
+body.sport-american-football .showcase-stage{background:radial-gradient(ellipse at 50% 72%,#61421b99 0,transparent 62%),linear-gradient(160deg,#211e17,#15130e 62%,#272116)}
+body.sport-american-football .player-card{--foil:#f3bd56;--foil-dark:#654b2e;--foil-glow:#e97849;background:radial-gradient(circle at 54% 26%,#66502d 0,transparent 53%),linear-gradient(154deg,#40331d,#282114 60%,#17140e)}
+body.sport-american-football .player-card.rarity-titan{--foil:#b9ddff;--foil-dark:#3a5369;--foil-glow:#a5d4ff}
+body.sport-american-football .player-card.rarity-elite{--foil:#fff0a9;--foil-dark:#75613a;--foil-glow:#ffe18a}
+body.sport-american-football .player-card.rarity-rare{--foil:#93d6ca;--foil-dark:#2c6259;--foil-glow:#8de3d0}
+body.sport-american-football .season-pill{border-color:#665632}
+body.sport-american-football .auction-sidebar,body.sport-american-football .bid-console{border-color:#594b30}
+body.sport-american-football .huge-xi{width:360px;height:360px;border:2px solid #f3bd5622;border-radius:50%;font-size:0;background:linear-gradient(90deg,transparent 49.6%,#f3bd5619 50%,transparent 50.4%),linear-gradient(0deg,transparent 49.6%,#f3bd5619 50%,transparent 50.4%)}
+body.sport-american-football .huge-xi:after{content:'';position:absolute;inset:0 105px;border:1px solid #e978491c;border-radius:50%}
+
+@media(max-width:880px){
+  body.game-live main{padding-bottom:calc(24px + env(safe-area-inset-bottom))}
+  .setup-layout{min-height:0;padding:24px 0;gap:22px}
+  .hero-copy{min-height:0;padding:10px 3px 4px}
+  .hero-title{font-size:clamp(54px,13vw,78px);margin:29px 0 16px}
+  .hero-signatures{gap:20px;margin-top:22px;padding-top:16px}
+  .hero-signatures b{font-size:35px}
+  .hero-ornament{width:320px;height:320px;right:0;bottom:-75px}
+  .hero-footnote{margin-top:30px}
+  .setup-shell{width:100%;padding:clamp(18px,5vw,28px)}
+  .tabs{overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  #game.is-live>.tabs{gap:14px}
+  #game.is-live>.tabs .tab{margin-right:0}
+  .mobile-auction-nav{top:env(safe-area-inset-top);padding-top:max(7px,env(safe-area-inset-top))}
+  .bid-console .quick-bid{min-height:44px}
+  .bid-console .bid-now{position:sticky;bottom:calc(10px + env(safe-area-inset-bottom));z-index:6;box-shadow:0 8px 26px #0008}
+  .mobile-auction-nav button{min-height:48px}
+  .room-copy,.join-room-row input,.join-room-row .outline-btn{min-height:46px}
+}
+@media(max-width:385px){
+  .hero-signatures{gap:13px}
+  .hero-signatures span{font-size:8px;letter-spacing:1px}
+  .setup-shell h2{font-size:43px}
+  .form-grid{gap:12px}
+}
+
 @media(max-width:880px){
   #game.is-live>.tabs{display:flex;margin:0 0 10px;padding:0 2px;position:relative;z-index:4}
   #game.is-live>.tabs .tab{flex:0 0 auto;margin:0 16px 0 0;padding:12px 4px 11px;font-size:11px}

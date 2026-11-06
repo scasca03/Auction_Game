@@ -21,6 +21,8 @@ ROOT = Path(__file__).resolve().parents[1]
 SOURCES = {
     "football": (ROOT / "players.js", "PLAYER_ROWS"),
     "basketball": (ROOT / "basketball.js", "BASKETBALL_ROWS"),
+    "baseball": (ROOT / "baseball.js", "BASEBALL_ROWS"),
+    "american-football": (ROOT / "american-football.js", "AMERICAN_FOOTBALL_ROWS"),
 }
 session = requests.Session()
 session.headers.update({"User-Agent": "The-Auction-photo-loader/3.0 (Wikimedia portrait retrieval for an independent sports auction game)"})
@@ -133,7 +135,7 @@ def fetch_collection(sport: str) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Descarga retratos con licencia abierta para The Auction.")
-    parser.add_argument("--sport", choices=("football", "basketball", "all"), default="all")
+    parser.add_argument("--sport", choices=(*SOURCES, "all"), default="all")
     args = parser.parse_args()
     sports = SOURCES if args.sport == "all" else (args.sport,)
     for sport in sports:

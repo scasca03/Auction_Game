@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0b0d0a">
-  <meta name="description" content="The Auction: subastas deportivas para jugar con tus amigos. Elige fútbol o basket, forma tu equipo y gana las pujas.">
+  <meta name="description" content="The Auction: subastas deportivas para jugar con tus amigos. Elige fútbol, basket, béisbol o fútbol americano.">
   <meta property="og:title" content="The Auction — La subasta deportiva">
   <meta property="og:description" content="Elige tu deporte. Forma tu equipo. Gana la puja.">
   <link rel="manifest" href="./manifest.webmanifest">
@@ -50,7 +50,7 @@
         <h2 id="setupTitle">REÚNE A TU <i>ONCE.</i></h2>
         <p class="setup-intro">Configura las reglas de la noche. Para crear una sala, escribe solo tu nombre; los invitados pondrán el suyo al entrar.</p>
         <div class="form-grid">
-          <div class="field"><label for="sport">DEPORTE</label><div class="input-control"><select id="sport"><option value="football">FÚTBOL</option><option value="basketball">BASKET</option></select></div></div>
+          <div class="field"><label for="sport">DEPORTE</label><div class="input-control"><select id="sport"><option value="football">FÚTBOL</option><option value="basketball">BASKET</option><option value="baseball">BÉISBOL</option><option value="american-football">FÚTBOL AMERICANO</option></select></div></div>
           <div class="field"><label for="count">PARTICIPANTES</label><div class="input-control"><input id="count" type="number" inputmode="numeric" min="2" max="10" value="4"><span>JUG.</span></div></div>
           <div class="field"><label for="budget">PRESUPUESTO INICIAL</label><div class="input-control"><input id="budget" type="number" inputmode="numeric" min="1" max="10000" value="30"><span>€</span></div></div>
           <div class="field"><label id="slotsLabel" for="slots">JUGADORES POR EQUIPO</label><div class="input-control"><input id="slots" type="number" inputmode="numeric" min="1" max="15" value="5"><span>CARTAS</span></div></div>
@@ -136,6 +136,8 @@
   <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
   <script src="./players.js"></script>
   <script src="./basketball.js"></script>
+  <script src="./baseball.js"></script>
+  <script src="./american-football.js"></script>
   <script src="./app.js"></script>
 </body>
 </html>

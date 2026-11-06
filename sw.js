@@ -1,5 +1,5 @@
-const CACHE = 'the-auction-v3';
-const FILES = ['./','./index.html','./styles.css','./players.js','./basketball.js','./app.js','./manifest.webmanifest','./logo.svg','./icon.svg','./icon-192.png','./icon-512.png','./apple-touch-icon.png'];
+const CACHE = 'the-auction-v4';
+const FILES = ['./','./index.html','./styles.css','./players.js','./basketball.js','./baseball.js','./american-football.js','./app.js','./manifest.webmanifest','./logo.svg','./icon.svg','./icon-192.png','./icon-512.png','./apple-touch-icon.png'];
 self.addEventListener('install', event=>event.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES)).then(()=>self.skipWaiting())));
 self.addEventListener('activate', event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch', event=>{
