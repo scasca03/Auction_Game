@@ -2,7 +2,7 @@
   "id": "./index.html",
   "name": "The Auction",
   "short_name": "The Auction",
-  "description": "Elige fútbol o basket, crea tu equipo y ficha a las estrellas.",
+  "description": "Elige fútbol, basket, béisbol o fútbol americano y ficha a las estrellas.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

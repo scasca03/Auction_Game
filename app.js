@@ -5,15 +5,65 @@ const $ = id => document.getElementById(id);
 const SAVE_KEY = 'bidxi-game-v2';
 const PHOTO_KEY = 'bidxi-photos-v2';
 const ROOM_SESSION_KEY = 'bidxi-room-session-v1';
+const ROOM_CONNECTION_TIMEOUT = 25000;
+const PEER_OPTIONS = {
+  config: {
+    iceServers: [
+      {urls:'stun:stun.l.google.com:19302'},
+      {urls:'stun:stun.cloudflare.com:3478'},
+      {urls:'turn:openrelay.metered.ca:80',username:'openrelayproject',credential:'openrelayproject'},
+      {urls:'turn:openrelay.metered.ca:443',username:'openrelayproject',credential:'openrelayproject'},
+      {urls:'turns:openrelay.metered.ca:443',username:'openrelayproject',credential:'openrelayproject'}
+    ],
+    sdpSemantics:'unified-plan'
+  }
+};
 const RARITY = {titan:'TITAN',elite:'ELITE',rare:'STAR',gold:'GOLD'};
 const STATS = ['RIT','TIR','PAS','REG','DEF','FIS'];
 const GK_STATS = ['EST','MAN','SAQ','REF','VEL','POS'];
 const BASKETBALL_STATS = ['TIR','TRI','PAS','REG','DEF','REB'];
+const BASEBALL_BATTER_STATS = ['CON','POT','VEL','BRA','DEF','CLT'];
+const BASEBALL_PITCHER_STATS = ['VEL','MOV','CTL','RES','BRA','CLT'];
+const AMERICAN_FOOTBALL_STATS = ['PAS','RUS','REC','BLO','DEF','VEL'];
+const SPORTS = {
+  football: {
+    players:FOOTBALL_PLAYERS, theme:'#0b0d0a', slots:11, badge:'FOOTBALL',
+    poolLabel:'FUTBOLISTAS', season:'SEASON 26 / LIVE MARKET', footnote:'BUILT FOR THE BEAUTIFUL GAME',
+    setupTitle:'REÚNE A TU <i>ONCE.</i>',
+    heroTitle:'NO COMPRES<br><span class="stroke-title">JUGADORES.</span><br><span class="lime">GANA</span> LEYENDAS<span class="period">.</span>',
+    heroDesc:'100 cracks. Un presupuesto. Amigos que se convierten en rivales. Cuando aparece una estrella, solo uno puede llevársela.',
+    fallback:'⚽'
+  },
+  basketball: {
+    players:BASKETBALL_PLAYERS, theme:'#080b13', slots:5, badge:'BASKETBALL',
+    poolLabel:'JUGADORES NBA', season:'NBA / LIVE MARKET', footnote:'BUILT FOR THE COURT',
+    setupTitle:'ARMA TU <i>QUINTETO.</i>',
+    heroTitle:'NO ELIJAS<br><span class="stroke-title">ESTRELLAS.</span><br><span class="lime">CREA</span> LEYENDAS<span class="period">.</span>',
+    heroDesc:'100 estrellas de la NBA. Un presupuesto. Amigos que se convierten en rivales. Cuando aparece una leyenda, solo uno se la lleva.',
+    fallback:'🏀'
+  },
+  baseball: {
+    players:BASEBALL_PLAYERS, theme:'#10170f', slots:9, badge:'BASEBALL',
+    poolLabel:'JUGADORES MLB', season:'MLB / LIVE MARKET', footnote:'BUILT FOR THE BALLPARK',
+    setupTitle:'ARMA TU <i>LINEUP.</i>',
+    heroTitle:'NO COMPRES<br><span class="stroke-title">JUGADORES.</span><br><span class="lime">DRAFT</span> LEYENDAS<span class="period">.</span>',
+    heroDesc:'100 estrellas del béisbol. Un presupuesto. Amigos que se convierten en rivales. Cuando aparece una leyenda, solo uno se la lleva.',
+    fallback:'⚾'
+  },
+  'american-football': {
+    players:AMERICAN_FOOTBALL_PLAYERS, theme:'#11100c', slots:11, badge:'AMERICAN FOOTBALL',
+    poolLabel:'JUGADORES NFL', season:'NFL / LIVE MARKET', footnote:'BUILT FOR THE GRIDIRON',
+    setupTitle:'ARMA TU <i>ONCE.</i>',
+    heroTitle:'NO COMPRES<br><span class="stroke-title">JUGADORES.</span><br><span class="lime">DRAFT</span> LEYENDAS<span class="period">.</span>',
+    heroDesc:'100 estrellas de la NFL. Un presupuesto. Amigos que se convierten en rivales. Cuando aparece una leyenda, solo uno se la lleva.',
+    fallback:'🏈'
+  }
+};
 const qs = (s, parent=document) => [...parent.querySelectorAll(s)];
 const e = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const euro = v => new Intl.NumberFormat('es-ES',{maximumFractionDigits:0}).format(v) + ' €';
 const fmt = v => new Intl.NumberFormat('es-ES',{maximumFractionDigits:0}).format(v);
-const flag = country => /^[A-Z]{2}$/.test(country) ? [...country].map(c=>String.fromCodePoint(127397+c.charCodeAt(0))).join('') : selectedSport==='basketball'?'🏀':'⚽';
+const flag = country => /^[A-Z]{2}$/.test(country) ? [...country].map(c=>String.fromCodePoint(127397+c.charCodeAt(0))).join('') : SPORTS[selectedSport].fallback;
 const time = () => new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
 const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 let selectedSport = 'football', PLAYERS = FOOTBALL_PLAYERS, game = null, audioEnabled = false, audioContext = null, installPrompt = null, revealTimer = null, toastTimer = null, photoCache = {}, photoRequest = null, currentAlbumFilter = 'all', storageError = false;
@@ -21,6 +71,8 @@ let room = {role:null,peer:null,connections:new Map(),hostConn:null,code:'',stat
 let guestGameInitialized = false;
 let peerScriptRequest = null;
 let roomConnectionPending = false;
+let roomConnectionTimer = null;
+let roomGeneration = 0;
 let clockInterval = null, clockTurnKey = '', resultsText = '';
 const brokenPhotoIds = new Set();
 const localPhotosLoaded = new Set();
@@ -28,37 +80,35 @@ const localPhotosLoaded = new Set();
 function photoStorageKey(sport=selectedSport) { return sport==='football'?PHOTO_KEY:`${PHOTO_KEY}-${sport}`; }
 function gameStorageKey(sport=selectedSport) { return sport==='football'?SAVE_KEY:`${SAVE_KEY}-${sport}`; }
 function setSport(sport, persist=true) {
-  if(sport!=='football'&&sport!=='basketball')return;
+  const config=SPORTS[sport];
+  if(!config)return;
   selectedSport=sport;
-  PLAYERS=sport==='basketball'?BASKETBALL_PLAYERS:FOOTBALL_PLAYERS;
+  PLAYERS=config.players;
   try { photoCache=JSON.parse(localStorage.getItem(photoStorageKey(sport))||'{}')||{}; }
   catch(error) { console.warn('No se pudo recuperar la caché de fotos.',error); photoCache={}; }
-  const basketball=sport==='basketball';
   brokenPhotoIds.clear();
-  document.body.classList.toggle('sport-basketball',sport==='basketball');
+  for(const name of Object.keys(SPORTS))document.body.classList.toggle(`sport-${name}`,name===sport);
   const themeColor=document.querySelector('meta[name="theme-color"]');
-  if(themeColor)themeColor.content=basketball?'#080b13':'#0b0d0a';
+  if(themeColor)themeColor.content=config.theme;
   if($('sport')){$('sport').value=sport;$('sport').disabled=Boolean(room.role);}
   if(persist)try{localStorage.setItem('auction-sport',sport);}catch(error){console.warn('No se pudo guardar el deporte seleccionado.',error);}
-  $('heroTitle').innerHTML=basketball
-    ? 'NO ELIJAS<br><span class="stroke-title">ESTRELLAS.</span><br><span class="lime">CREA</span> LEYENDAS<span class="period">.</span>'
-    : 'NO COMPRES<br><span class="stroke-title">JUGADORES.</span><br><span class="lime">GANA</span> LEYENDAS<span class="period">.</span>';
-  $('heroDesc').textContent=basketball
-    ? '100 estrellas de la NBA. Un presupuesto. Amigos que se convierten en rivales. Cuando aparece una leyenda, solo uno se la lleva.'
-    : '100 cracks. Un presupuesto. Amigos que se convierten en rivales. Cuando aparece una estrella, solo uno puede llevársela.';
-  $('poolCountLabel').textContent=basketball?'JUGADORES NBA':'FUTBOLISTAS';
-  $('sportFootnote').textContent=basketball?'BUILT FOR THE COURT':'BUILT FOR THE BEAUTIFUL GAME';
-  $('setupTitle').innerHTML=basketball?'ARMA TU <i>QUINTETO.</i>':'REÚNE A TU <i>ONCE.</i>';
-  $('seasonLabel').textContent=basketball?'NBA / LIVE MARKET':'SEASON 26 / LIVE MARKET';
-  $('sportBadge').textContent=basketball?'BASKETBALL':'FOOTBALL';
+  $('heroTitle').innerHTML=config.heroTitle;
+  $('heroDesc').textContent=config.heroDesc;
+  $('poolCountLabel').textContent=config.poolLabel;
+  $('sportFootnote').textContent=config.footnote;
+  $('setupTitle').innerHTML=config.setupTitle;
+  $('seasonLabel').textContent=config.season;
+  $('sportBadge').textContent=config.badge;
+  $('slotsLabel').textContent=sport==='basketball'?'JUGADORES POR EQUIPO':sport==='baseball'?'JUGADORES POR LINEUP':'JUGADORES POR EQUIPO';
+  if($('slots')){$('slots').value=String(config.slots);}
   if(game){render();if(game.started)loadPhotos();}
 }
 try {
   const preferred=localStorage.getItem('auction-sport');
-  if(preferred==='basketball')selectedSport=preferred;
+  if(SPORTS[preferred])selectedSport=preferred;
   photoCache=JSON.parse(localStorage.getItem(photoStorageKey())||'{}')||{};
 } catch(error) { console.warn('No se pudo recuperar la configuración local.',error); }
-PLAYERS=selectedSport==='basketball'?BASKETBALL_PLAYERS:FOOTBALL_PLAYERS;
+PLAYERS=SPORTS[selectedSport].players;
 
 function shuffle(input) {
   const a = [...input];
@@ -79,10 +129,16 @@ function soldCount() { return Object.values(game.results).filter(r=>r.status==='
 function revealedCount() { return Object.keys(game.results).length + (current() && !game.results[current().id] ? 1 : 0); }
 function playerStats(p) {
   let hash=17; for(const char of p.name)hash=(hash*31+char.charCodeAt(0))>>>0;
-  const base=p.ovr; const gk=p.pos==='POR';
+  const base=p.ovr; const gk=selectedSport==='football'&&p.pos==='POR';
   const footballAdjustments={DC:[8,7,-15,0,-41,3],EI:[8,-1,0,9,-35,-10],ED:[8,-1,0,9,-35,-10],MC:[-4,-4,6,4,0,-3],MCO:[-1,2,6,7,-24,-9],MCD:[-14,-17,7,-9,5,5],DFC:[-17,-34,-17,-18,7,5],LI:[8,-14,-5,-2,5,1],LD:[8,-14,-5,-2,5,1]};
   const basketballAdjustments={PG:[4,3,7,8,-9,-18],SG:[6,5,1,7,-10,-14],SF:[1,0,0,2,0,-4],PF:[-8,-10,-3,-5,9,10],C:[-18,-20,-9,-12,13,16]};
-  const adjust=selectedSport==='basketball'?(basketballAdjustments[p.pos]||[0,0,0,0,0,0]):(gk?[1,0,-11,2,-36,2]:(footballAdjustments[p.pos]||[0,0,0,0,0,0]));
+  const baseballAdjustments={SP:[0,-4,1,15,4,5],RP:[2,-1,3,-7,2,6],C:[-3,-8,-10,8,7,2],SS:[2,-5,8,5,10,5],CF:[8,-3,15,3,5,5],RF:[4,8,4,7,2,4],LF:[3,7,2,1,-1,2],'1B':[-2,12,-7,0,1,3],'2B':[5,-7,10,1,5,4],'3B':[1,8,3,4,3,4],DH:[-3,13,-8,0,-15,2]};
+  const americanFootballAdjustments={QB:[15,-8,4,0,-35,1],RB:[-8,8,5,1,-7,10],WR:[-15,-7,12,0,-24,14],TE:[-8,-1,0,8,-4,4],OL:[-35,-40,-20,15,8,-15],DL:[-35,-30,-20,2,15,-8],LB:[-25,-8,-8,0,15,1],CB:[-30,-25,2,0,4,16],S:[-28,-18,-3,0,8,6],K:[-12,-40,-30,-45,-30,-25]};
+  let adjust;
+  if(selectedSport==='basketball')adjust=basketballAdjustments[p.pos]||[0,0,0,0,0,0];
+  else if(selectedSport==='baseball')adjust=baseballAdjustments[p.pos]||[0,0,0,0,0,0];
+  else if(selectedSport==='american-football')adjust=americanFootballAdjustments[p.pos]||[0,0,0,0,0,0];
+  else adjust=gk?[1,0,-11,2,-36,2]:(footballAdjustments[p.pos]||[0,0,0,0,0,0]);
   return adjust.map((delta,i)=>Math.max(30,Math.min(99,base+delta+(((hash>>>(i*4))&7)-3))));
 }
 function photoFor(p) { return brokenPhotoIds.has(p.id) ? null : photoCache[p.id]?.url || null; }
@@ -90,7 +146,12 @@ function photoLink(p) { return photoCache[p.id]?.source || ('https://en.wikipedi
 function photoBroken(id,sport=selectedSport) { if(sport!==selectedSport)return;brokenPhotoIds.add(id);syncPhotosToDOM(); }
 function card(p,size='',showPhoto=true) {
   const initials=p.name.split(' ').slice(0,2).map(n=>n[0]).join('').toUpperCase();
-  const stats=playerStats(p), labels=selectedSport==='basketball'?BASKETBALL_STATS:(p.pos==='POR'?GK_STATS:STATS);
+  const stats=playerStats(p);
+  let labels=STATS;
+  if(selectedSport==='basketball')labels=BASKETBALL_STATS;
+  else if(selectedSport==='baseball')labels=p.pos==='SP'||p.pos==='RP'?BASEBALL_PITCHER_STATS:BASEBALL_BATTER_STATS;
+  else if(selectedSport==='american-football')labels=AMERICAN_FOOTBALL_STATS;
+  else if(p.pos==='POR')labels=GK_STATS;
   const photo=showPhoto ? photoFor(p) : null;
   const sport=selectedSport;
   return `<article class="player-card rarity-${p.rarity} ${size} ${photo?'':'photo-pending'}" aria-label="${e(p.name)}, ${p.pos}, media ${p.ovr}">
@@ -99,7 +160,7 @@ function card(p,size='',showPhoto=true) {
     <div class="card-grade"><strong>${p.ovr}</strong><span>${e(p.pos)}</span></div>
     <div class="card-flag" title="${e(p.country)}">${flag(p.country)}</div><div class="card-rarity">◆ ${RARITY[p.rarity]}</div>
     <div class="card-nameplate"><strong title="${e(p.name)}">${e(p.name)}</strong><span>${e(p.club)}</span></div>
-    <div class="card-attributes">${labels.map((label,i)=>`<span><b>${stats[i]}</b> ${label}</span>`).join('')}</div><div class="card-number">THE AUCTION · ${selectedSport==='basketball'?'NBA':'FOOTBALL'}</div>
+    <div class="card-attributes">${labels.map((label,i)=>`<span><b>${stats[i]}</b> ${label}</span>`).join('')}</div><div class="card-number">THE AUCTION · ${SPORTS[selectedSport].badge}</div>
   </article>`;
 }
 function syncPhotosToDOM() {
@@ -277,6 +338,7 @@ function newGame() {
   showGame();render();revealPlayer();loadPhotos();sfx('open');
 }
 function createRoom(){
+  if(room.role||roomConnectionPending){toast('Cierra la sala actual antes de crear otra.',true);return;}
   const n=Number($('count').value),budget=Number($('budget').value),slots=Number($('slots').value),inc=Number($('inc').value);
   const hostName=qs('input',$('names'))[0]?.value.trim()||'';
   let error=validateSettings(n,budget,slots,inc);
@@ -286,6 +348,7 @@ function createRoom(){
   game={version:2,sport:selectedSport,createdAt:new Date().toISOString(),budget,slots,inc,turnSeconds:turnSeconds(),hostPlays:$('hostPlays').checked,teams:hostName?[{id:0,name:hostName,balance:budget,players:[]}]:[],queue:shuffle(PLAYERS.map(p=>p.id)),cursor:0,turn:-1,bid:0,leader:null,passes:[],results:{},log:[],finished:false,pendingWin:false,paused:false,started:false};
   room.role='host';room.code=roomCode();room.maxPlayers=n;room.owners=hostName?{0:'host'}:{};room.reconnectTokens={};room.status='Esperando a que se unan los participantes.';
   $('sport').disabled=true;
+  roomGeneration++;
   roomStatus(room.status);renderSetupLobby();startHosting();
 }
 function roomCode() {
@@ -311,35 +374,69 @@ function roomStatus(message,warning=false) {
   if(setupStatus){setupStatus.textContent=message;setupStatus.classList.toggle('is-warning',warning);}
 }
 function reportPeerError(error) {
-  const detail=error?.type==='unavailable-id'?'Ese código ya está en uso. Reinicia la partida para generar otra sala.':`No se pudo conectar con la sala${error?.message?': '+error.message:'.'}`;
+  let detail;
+  if(error?.type==='unavailable-id')detail='Ese código ya está en uso. Reinicia la partida para generar otra sala.';
+  else if(error?.type==='peer-unavailable')detail='No se encontró esa sala. Comprueba el código y confirma que el anfitrión mantiene la página abierta.';
+  else if(error?.type==='webrtc'||/negotiat/i.test(error?.message||''))detail='Falló la conexión directa entre dispositivos (WebRTC). Comprueba que ambos tengan Internet, desactiva VPN/proxy y prueba otra red; algunas redes requieren un servidor TURN.';
+  else detail=`No se pudo conectar con la sala${error?.message?': '+error.message:'.'}`;
   roomStatus(detail,true);toast(detail,true);
+}
+function clearRoomConnectionTimer() {
+  clearTimeout(roomConnectionTimer);
+  roomConnectionTimer=null;
+}
+function roomConnectionTimedOut() {
+  if(room.role!=='host'&&room.role!=='guest')return;
+  roomGeneration++;
+  clearRoomConnectionTimer();
+  roomConnectionPending=false;
+  room.peer?.destroy();
+  room.peer=null;room.hostConn=null;
+  room.role=null;room.code='';room.myTeam=null;
+  $('sport').disabled=false;
+  guestGameInitialized=false;
+  const message='La conexión tardó demasiado. Comprueba el código, la conexión a Internet y vuelve a intentarlo.';
+  roomStatus(message,true);toast(message,true);renderRoomControls();
 }
 function loadPeerJS() {
   if(window.Peer)return Promise.resolve();
   if(peerScriptRequest)return peerScriptRequest;
   peerScriptRequest=new Promise((resolve,reject)=>{
-    const script=document.createElement('script');
-    script.src='https://cdn.jsdelivr.net/npm/peerjs@1.5.5/dist/peerjs.min.js';
-    script.crossOrigin='anonymous';
-    script.onload=()=>{if(window.Peer)resolve();else{peerScriptRequest=null;reject(Error('PeerJS no está disponible.'));}};
-    script.onerror=()=>{peerScriptRequest=null;reject(Error('No se pudo cargar PeerJS desde jsDelivr.'));};
-    document.head.appendChild(script);
+    const sources=['https://cdn.jsdelivr.net/npm/peerjs@1.5.5/dist/peerjs.min.js','https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js'];
+    const loadSource=index=>{
+      const script=document.createElement('script');
+      script.src=sources[index];script.crossOrigin='anonymous';
+      script.onload=()=>{if(window.Peer)resolve();else{peerScriptRequest=null;reject(Error('PeerJS no está disponible.'));}};
+      script.onerror=()=>{
+        script.remove();
+        if(index+1<sources.length)loadSource(index+1);
+        else{peerScriptRequest=null;reject(Error('No se pudo cargar PeerJS desde los CDN disponibles.'));}
+      };
+      document.head.appendChild(script);
+    };
+    loadSource(0);
   });
   return peerScriptRequest;
 }
 function startHosting() {
+  const generation=roomGeneration;
   roomStatus('Conectando con el servidor de señalización…');
   renderSetupLobby();
+  roomConnectionPending=true;
+  roomConnectionTimer=setTimeout(roomConnectionTimedOut,ROOM_CONNECTION_TIMEOUT);
   try{
     loadPeerJS().then(()=>{
-      if(room.role!=='host')return;
-      room.peer=new window.Peer('bidxi'+room.code);
-      room.peer.on('open',()=>{room.status='Sala abierta. Comparte el código para que se unan.';roomStatus(room.status);broadcastLobby();});
-      room.peer.on('connection',conn=>{
+      if(room.role!=='host'||generation!==roomGeneration)return;
+      const peer=new window.Peer('bidxi'+room.code,PEER_OPTIONS);
+      room.peer=peer;
+      peer.on('open',()=>{if(room.peer!==peer||generation!==roomGeneration)return;clearRoomConnectionTimer();roomConnectionPending=false;room.status='Sala abierta. Comparte el código para que se unan.';roomStatus(room.status);broadcastLobby();});
+      peer.on('connection',conn=>{
+        if(room.peer!==peer||generation!==roomGeneration){conn.close();return;}
         room.connections.set(conn.peer,conn);
         conn.on('open',()=>{room.connections.set(conn.peer,conn);sendLobby(conn);});
-        conn.on('data',message=>handleHostMessage(conn,message));
+        conn.on('data',message=>{if(room.peer===peer&&generation===roomGeneration)handleHostMessage(conn,message);});
         conn.on('close',()=>{
+          if(room.peer!==peer||generation!==roomGeneration)return;
           if(room.connections.get(conn.peer)!==conn)return;
           room.connections.delete(conn.peer);
           const departed=Number(Object.keys(room.owners).find(id=>room.owners[id]===conn.peer));
@@ -348,11 +445,11 @@ function startHosting() {
           if(game&&!game.started)broadcastLobby();
           else if(game)render();
         });
-        conn.on('error',reportPeerError);
+        conn.on('error',error=>{if(room.peer===peer&&generation===roomGeneration)reportPeerError(error);});
       });
-      room.peer.on('error',reportPeerError);
-    }).catch(error=>{if(!room.peer){room.role=null;room.code='';$('sport').disabled=false;renderRoomPanel();}reportPeerError(error);});
-  }catch(error){room.role=null;room.code='';$('sport').disabled=false;reportPeerError(error);}
+      peer.on('error',error=>{if(room.peer===peer&&generation===roomGeneration)reportPeerError(error);});
+    }).catch(error=>{if(generation!==roomGeneration)return;clearRoomConnectionTimer();roomConnectionPending=false;if(!room.peer){room.role=null;room.code='';$('sport').disabled=false;renderRoomPanel();}reportPeerError(error);});
+  }catch(error){clearRoomConnectionTimer();roomConnectionPending=false;room.role=null;room.code='';$('sport').disabled=false;reportPeerError(error);}
 }
 function connectToRoom() {
   if(roomConnectionPending)return;
@@ -365,21 +462,26 @@ function connectToRoom() {
   if(!name||name.length>24){roomStatus('Escribe tu nombre (máximo 24 caracteres).',true);return;}
   leaveRoom();
   room.role='guest';room.code=code;room.joinName=name;roomConnectionPending=true;$('sport').disabled=true;roomStatus('Buscando la sala…');
+  const generation=++roomGeneration;
+  roomConnectionTimer=setTimeout(roomConnectionTimedOut,ROOM_CONNECTION_TIMEOUT);
   try{
     loadPeerJS().then(()=>{
-      if(room.role!=='guest')return;
-      room.peer=new window.Peer();
-      room.peer.on('open',id=>{
+      if(room.role!=='guest'||generation!==roomGeneration)return;
+      const peer=new window.Peer(undefined,PEER_OPTIONS);
+      room.peer=peer;
+      peer.on('open',id=>{
+        if(room.peer!==peer||generation!==roomGeneration)return;
         room.localPeerId=id;
-        room.hostConn=room.peer.connect('bidxi'+code,{reliable:true});
-        room.hostConn.on('open',()=>{roomConnectionPending=false;roomStatus('Conectado. Entrando en la sala…');room.hostConn.send({type:'join',name:room.joinName,token});});
-        room.hostConn.on('data',handleGuestMessage);
-        room.hostConn.on('close',()=>{roomConnectionPending=false;if(room.reconnectDisabled)return;roomStatus('Se perdió la conexión con el anfitrión. La partida queda en modo consulta.',true);renderRoomControls();});
-        room.hostConn.on('error',error=>{roomConnectionPending=false;reportPeerError(error);});
+        const hostConn=peer.connect('bidxi'+code,{reliable:true});
+        room.hostConn=hostConn;
+        hostConn.on('open',()=>{if(room.peer!==peer||room.hostConn!==hostConn||generation!==roomGeneration)return;clearRoomConnectionTimer();roomConnectionPending=false;roomStatus('Conectado. Entrando en la sala…');hostConn.send({type:'join',name:room.joinName,token});});
+        hostConn.on('data',message=>{if(room.peer===peer&&room.hostConn===hostConn&&generation===roomGeneration)handleGuestMessage(message);});
+        hostConn.on('close',()=>{if(room.peer!==peer||room.hostConn!==hostConn||generation!==roomGeneration)return;clearRoomConnectionTimer();roomConnectionPending=false;if(room.reconnectDisabled)return;roomStatus('Se perdió la conexión con el anfitrión. La partida queda en modo consulta.',true);renderRoomControls();});
+        hostConn.on('error',error=>{if(room.peer!==peer||room.hostConn!==hostConn||generation!==roomGeneration)return;roomConnectionPending=false;reportPeerError(error);});
       });
-      room.peer.on('error',error=>{roomConnectionPending=false;reportPeerError(error);});
-    }).catch(error=>{roomConnectionPending=false;if(!room.peer){room.role=null;room.code='';$('sport').disabled=false;}reportPeerError(error);});
-  }catch(error){roomConnectionPending=false;room.role=null;room.code='';$('sport').disabled=false;reportPeerError(error);}
+      peer.on('error',error=>{if(room.peer===peer&&generation===roomGeneration){roomConnectionPending=false;reportPeerError(error);}});
+    }).catch(error=>{if(generation!==roomGeneration)return;clearRoomConnectionTimer();roomConnectionPending=false;if(!room.peer){room.role=null;room.code='';$('sport').disabled=false;}reportPeerError(error);});
+  }catch(error){clearRoomConnectionTimer();roomConnectionPending=false;room.role=null;room.code='';$('sport').disabled=false;reportPeerError(error);}
 }
 function sendRoomState(conn) {
   if(!game||!conn?.open)return;
@@ -560,6 +662,8 @@ function ejectTeam(teamId){
 }
 function closeRoom(){
   if(room.role!=='host'||!confirm('¿Cerrar la sala y desconectar a todos los participantes?'))return;
+  roomGeneration++;
+  clearRoomConnectionTimer();
   for(const conn of room.connections.values()){if(conn.open)conn.send({type:'roomClosed'});conn.close();}
   room.connections.clear();room.peer?.destroy();
   if(game)game.paused=false;
@@ -570,6 +674,8 @@ function closeRoom(){
   render();
 }
 function leaveRoom() {
+  roomGeneration++;
+  clearRoomConnectionTimer();
   for(const conn of room.connections.values())conn.close();
   room.hostConn?.close();
   room.peer?.destroy();
