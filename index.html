@@ -86,6 +86,7 @@
         <button class="tab" data-tab="album">04 <span>ÁLBUM</span></button>
       </nav>
       <section id="auctionTab" class="tab-pane">
+        <div id="activeTurnBar" class="active-turn-bar" role="status" aria-live="polite"><span class="active-turn-label">TURNO EN JUEGO</span><strong id="activeTurnName">—</strong><span id="activeTurnIndex" class="active-turn-index">SIN TURNO ACTIVO</span></div>
         <nav class="mobile-auction-nav" aria-label="Vista de la subasta" role="group">
           <button id="mobileAuctionTab" type="button" class="is-active" aria-pressed="true"><span>01</span> PUJAR</button>
           <button id="mobileTeamsTab" type="button" aria-pressed="false"><span>02</span> EQUIPOS <i>LIVE</i></button>
@@ -95,12 +96,12 @@
           <div class="auction-main">
             <div class="showcase">
               <div class="showcase-heading"><span>✦ &nbsp; EN EL ESCAPARATE</span><span id="lotNumber">LOTE 001 / 100</span></div>
+              <div class="lot-heading showcase-player-heading"><span class="tiny-label">AHORA EN SUBASTA</span><h2 id="pname">—</h2><div class="player-meta" id="pinfo"></div><a id="photoSource" class="photo-credit hidden" href="https://commons.wikimedia.org/" target="_blank" rel="noopener noreferrer">VER FUENTE Y LICENCIA DE LA FOTOGRAFÍA ↗</a></div>
               <div class="showcase-stage"><div class="stage-halo"></div><div class="stage-lines"></div><div class="stage-label-left">THE AUCTION / EXCLUSIVE</div><div class="stage-label-right">PLAYER MARKET — 26</div><div id="activeCard" class="stage-card"></div><div class="ground-glow"></div></div>
               <div class="showcase-bottom"><span class="status-dot"></span> <span id="stageStatus">OBJETIVO REVELADO</span><span class="showcase-bottom-right">◆ PLAYER DROP SERIES</span></div>
             </div>
             <aside class="bid-console">
               <div class="bid-console-top"><span class="section-index">02 / BID ROOM</span><span class="on-air"><i></i> EN DIRECTO</span></div>
-              <div class="lot-heading"><span class="tiny-label">AHORA EN SUBASTA</span><h2 id="pname">—</h2><div class="player-meta" id="pinfo"></div><a id="photoSource" class="photo-credit hidden" href="https://commons.wikimedia.org/" target="_blank" rel="noopener noreferrer">VER FUENTE Y LICENCIA DE LA FOTOGRAFÍA ↗</a></div>
               <div class="bid-display"><div class="bid-display-top"><span>PUJA ACTUAL</span><span class="bid-symbol">↗</span></div><div id="bid" class="bid-value">0 <small>€</small></div><div id="leader" class="bid-leader"><span class="leader-bullet"></span> ABIERTO A TODOS LOS CLUBES</div></div>
               <div class="auction-clock" id="auctionClock" role="timer" aria-live="off"><span>TIEMPO PARA PUJAR</span><strong id="turnCountdown">15</strong><i id="timerBar"></i></div>
               <div class="turn-panel"><div class="turn-panel-heading"><span>TURNO ACTUAL</span><span class="turn-badge" id="turnBadge">TURNO 01</span></div><span class="helper-text" id="balanceHint">Esperando a que empiece la puja.</span></div>

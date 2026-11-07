@@ -289,7 +289,8 @@ function tickTurnClock(){
   updateClockDisplay();
   if(room.role!=='guest'&&!game.paused&&!game.pendingWin&&game.turn>=0&&game.turnDeadlineAt&&Date.now()>=game.turnDeadlineAt){
     game.turnRemainingMs=0;game.turnDeadlineAt=0;
-    pass(game.turn,null,true);
+    if(game.leader===null)placeBid(game.turn,minBid(),null,true);
+    else pass(game.turn,null,true);
   }
 }
 function updateClockDisplay(){
@@ -700,6 +701,9 @@ function loadGame(){
 function render(){
   if(!game)return;
   const p=current(), sold=soldCount(), discovered=revealedCount(), totalNeeded=game.teams.length*game.slots;
+  const active=game.turn>=0?game.teams[game.turn]:null;
+  $('activeTurnName').textContent=active?.name||(game.pendingWin?'FICHAJE CERRADO':p?'ESPERANDO ADJUDICACIÓN':'MERCADO CERRADO');
+  $('activeTurnIndex').textContent=active?`TURNO ${String(game.turn+1).padStart(2,'0')}`:'SIN TURNO ACTIVO';
   $('summary').innerHTML=[
     ['◎',fmt(game.teams.length),'EQUIPOS EN LIZA'],
     ['✦',fmt(sold)+' / '+fmt(totalNeeded),'FICHAJES'],
@@ -722,16 +726,16 @@ function render(){
     $('bid').innerHTML=`${fmt(game.bid)} <small>€</small>`;
     $('leader').innerHTML=game.leader===null?'<span class="leader-bullet"></span> SIN OFERTAS TODAVÍA':`<span class="leader-bullet"></span> LIDERA: <strong>${e(game.teams[game.leader].name.toUpperCase())}</strong>`;
     $('minimumBid').textContent=`MÍNIMO ${euro(minBid())}`;
-    const active=game.turn>=0?game.teams[game.turn]:null;
     $('turnBadge').textContent=game.turn>=0?'TURNO '+String(game.turn+1).padStart(2,'0'):'ÚLTIMA OFERTA';
     $('balanceHint').textContent=active?`Saldo: ${euro(active.balance)} · Puja máxima: ${euro(maxPay(game.turn))} (reservando plazas).`:'Esperando a adjudicar el lote.';
     $('amount').min=String(minBid());
     if(document.activeElement!==$('amount'))$('amount').value=String(minBid());
     $('turnNote').classList.remove('is-warning');
-    $('turnNote').textContent=game.pendingWin?'Fichaje cerrado. Continúa para descubrir al siguiente.':active?`Es el turno de ${active.name}. ${game.passes.length} club(es) se han retirado de esta puja.`:'No quedan más clubes con capacidad de pujar.';
+    $('turnNote').textContent=game.pendingWin?'Fichaje cerrado. Continúa para descubrir al siguiente.':active&&game.leader===null?`Es el turno de ${active.name}. Debe abrir la puja con al menos ${euro(minBid())}.`:active?`Es el turno de ${active.name}. ${game.passes.length} club(es) se han retirado de esta puja.`:'No quedan más clubes con capacidad de pujar.';
     const disabled=game.pendingWin || game.finished || game.paused, canAct=canControlTurn();
     $('makeBid').disabled=disabled||!canAct;
-    $('pass').disabled=disabled||!canAct;
+    $('pass').disabled=disabled||!canAct||game.leader===null;
+    $('pass').title=game.leader===null?'La primera puja es obligatoria':'Pasar turno';
     $('award').disabled=disabled||game.leader===null||room.role==='guest';
     $('skip').disabled=disabled||room.role==='guest';
     $('amount').disabled=disabled||!canAct;
@@ -826,6 +830,7 @@ function advance(animate=true){
 }
 function pass(teamId=game?.turn,sourcePeer=null,automatic=false){
   if(!game||!current()||game.turn<0||game.pendingWin||teamId!==game.turn||(game.paused&&!automatic))return;
+  if(game.leader===null){if(!automatic)toast('La primera puja es obligatoria.',true);return;}
   if(room.role==='guest'&&!sourcePeer){
     if(!canControlTurn()){toast('Elige un club y espera a que sea su turno.',true);return;}
     if(room.hostConn?.open)room.hostConn.send({type:'action',action:'pass',teamId});
@@ -845,7 +850,7 @@ function moveTurn(){
   if(next<0){game.turn=-1;if(game.leader!==null)award();else unsold('Nadie presentó oferta.');}
   else game.turn=next;
 }
-function placeBid(teamId=game?.turn,amount=Number($('amount').value),sourcePeer=null){
+function placeBid(teamId=game?.turn,amount=Number($('amount').value),sourcePeer=null,automatic=false){
   if(!game||!current()||game.turn<0||game.pendingWin||game.paused||teamId!==game.turn)return;
   if(room.role==='guest'&&!sourcePeer){
     if(!canControlTurn()){toast('Elige un club y espera a que sea su turno.',true);return;}
@@ -854,7 +859,7 @@ function placeBid(teamId=game?.turn,amount=Number($('amount').value),sourcePeer=
     return;
   }
   if(sourcePeer&&room.owners[teamId]!==sourcePeer)return;
-  if(!sourcePeer&&room.role==='host'&&!canControlTurn()){toast('La puja corresponde a otro participante.',true);return;}
+  if(!sourcePeer&&!automatic&&room.role==='host'&&!canControlTurn()){toast('La puja corresponde a otro participante.',true);return;}
   const i=teamId;
   if(!Number.isInteger(amount)||amount<minBid()){toast(`La oferta mínima es ${euro(minBid())}.`,true);return;}
   if(!eligible(i)||amount>maxPay(i)){toast(`Puja no válida. ${game.teams[i].name} puede ofrecer hasta ${euro(maxPay(i))}.`,true);return;}
