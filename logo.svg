@@ -1,14 +1,3 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 512 512">
-  <defs>
-    <linearGradient id="a" x1="0" y1="0" x2="1" y2="1">
-      <stop stop-color="#ffad55"/>
-      <stop offset="1" stop-color="#f36537"/>
-    </linearGradient>
-  </defs>
-  <rect width="512" height="512" rx="112" fill="#10131d"/>
-  <path d="M256 28 466 142v228L256 484 46 370V142Z" fill="#171c29" stroke="#333b4c" stroke-width="8"/>
-  <path d="m148 376 108-240 108 240M198 292h116" fill="none" stroke="url(#a)" stroke-width="36" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="m165 136 42-42 110 110-42 42z" fill="#fff2dc"/>
-  <path d="m139 159 56-56 42 42-56 56zM281 230l42-42 42 42-42 42z" fill="url(#a)"/>
-  <path d="M128 416h256" stroke="#ff8a45" stroke-width="10" stroke-linecap="round" opacity=".8"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="360" viewBox="0 0 800 360">
+  <image href="./auction-artwork.png" x="-110" y="-575" width="1028" height="1028" preserveAspectRatio="none"/>
 </svg>

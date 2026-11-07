@@ -4,14 +4,14 @@
 
 ## Inicio rápido
 
-1. Descomprime [`The_Auction_v4.zip`](./The_Auction_v4.zip) **manteniendo todos los archivos en la misma carpeta**.
+1. Descomprime [`The_Auction_v5.zip`](./The_Auction_v5.zip) **manteniendo todos los archivos en la misma carpeta**.
 2. Para jugar en local, abre `index.html`. Para funciones PWA, fotografías y multijugador, sirve la carpeta por HTTP: `python -m http.server 8080` y abre `http://localhost:8080`. En partidas por Internet, publica la app bajo HTTPS.
 3. Para publicarlo, sube **todo el contenido de la carpeta** a la raíz del repositorio GitHub Pages o a Netlify. **No basta con subir `index.html`**.
 4. En móvil, pulsa **Instalar app**; si el navegador no ofrece instalación directa, sigue las instrucciones para añadirla a la pantalla de inicio. La PWA requiere HTTPS (o localhost).
 
 ## Incluye
 
-- Identidad visual original **The Auction**, logo SVG e iconos de instalación. Cada deporte tiene paleta, cartas y presentación propias; no incluye recursos oficiales de ligas ni videojuegos.
+- Identidad visual **The Auction** con la ilustración `auction-artwork.png` como fondo adaptable y logotipo horizontal recortado desde `logo.svg`. Cada deporte tiene paleta, cartas y presentación propias; no incluye recursos oficiales de ligas ni videojuegos.
 - Cuatro colecciones independientes de **100 jugadores**: fútbol en `players.js`, basket/NBA en `basketball.js`, béisbol en `baseball.js` y fútbol americano/NFL en `american-football.js`. Las medias y valores de mercado son ilustrativos, no ratings oficiales ni una clasificación actualizada.
 - Cartas de categoría **TITAN / ELITE / STAR / GOLD** con acabados distintos y seis atributos posicionales simulados (*no son atributos oficiales*).
 - Retratos fotográficos reales: el navegador solicita miniaturas de **Wikipedia** mediante su API pública (necesita conexión). En la tarjeta del jugador se muestra un enlace a la fuente. En caso de ausencia, fallo o bloqueo de la API, se usa un monograma gráfico. **Las fotos no están empaquetadas en el ZIP**; la disponibilidad y los permisos de reutilización varían por foto.
@@ -28,8 +28,8 @@
 ## Cómo personalizar
 
 - `players.js`, `basketball.js`, `baseball.js` y `american-football.js`: colecciones con `Nombre|POS|Equipo|OVR|Valor|Código país|Título de Wikipedia opcional`.
-- `styles.css`: colores, tipografía, tarjetas, animaciones y responsive.
-- `logo.svg` y `icon.svg`: identidad e iconografía SVG de The Auction.
+- `styles.css`: colores, tipografía, tarjetas, animaciones, fondo y responsive.
+- `auction-artwork.png`, `logo.svg` y `icon.svg`: ilustración, logotipo e iconografía de The Auction.
 - En partidas locales, los nombres se escriben en la configuración; no hay participantes con nombre precargado.
 - `app.js`: lógica de juego, fotos y guardado.
 
